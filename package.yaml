@@ -1,0 +1,50 @@
+name: aeson-match-qq
+version: 1.0.0
+synopsis: Matching Aeson values with a quasiquoter
+description: See README.markdown
+category: Web
+maintainer: matvey.aksenov@gmail.com
+copyright: Matvey Aksenov 2020
+license: BSD2
+extra-source-files:
+  - README.markdown
+
+dependencies:
+  - base >= 4.7 && < 5
+
+library:
+  dependencies:
+    - aeson
+    - attoparsec
+    - bytestring
+    - either
+    - haskell-src-meta
+    - scientific
+    - template-haskell
+    - text
+    - unordered-containers
+    - vector
+  source-dirs:
+    src
+  ghc-options:
+    - -funbox-strict-fields
+    - -Wall
+    - -Werror
+
+tests:
+  spec:
+    dependencies:
+      - aeson
+      - aeson-qq
+      - aeson-match-qq
+      - hspec
+      - unordered-containers
+    source-dirs:
+      test
+    main:
+      Spec.hs
+    ghc-options:
+      - -Wall
+      - -Werror
+      - -threaded
+      - -with-rtsopts=-N

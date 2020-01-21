@@ -1,0 +1,40 @@
+module Aeson.Match.QQ
+  ( Value(..)
+  , Array
+  , Object
+  , Box(..)
+  , Path
+  , PathElem(..)
+  , parse
+  , qq
+  , match
+  , mismatch
+  , missingPathElem
+  , extraArrayValues
+  , extraObjectValues
+  ) where
+
+import           Data.String (IsString(..))
+import           Language.Haskell.TH.Quote (QuasiQuoter(..))
+import           Language.Haskell.TH.Syntax (Lift(..))
+
+import           Aeson.Match.QQ.Internal.Match (Path, PathElem(..), match, mismatch, missingPathElem, extraArrayValues, extraObjectValues)
+import           Aeson.Match.QQ.Internal.Parse (parse)
+import           Aeson.Match.QQ.Internal.Value (Value(..), Box(..), Array, Object)
+
+
+qq :: QuasiQuoter
+qq = QuasiQuoter
+  { quoteExp = \str ->
+      case parse (fromString str) of
+        Left err ->
+          error ("Aeson.Match.QQ.qq: " ++ err)
+        Right val ->
+          lift val
+  , quotePat =
+      \_ -> error "Aeson.Match.QQ.qq: no quotePat"
+  , quoteType =
+      \_ -> error "Aeson.Match.QQ.qq: no quoteType"
+  , quoteDec =
+      \_ -> error "Aeson.Match.QQ.qq: no quoteDec"
+  }
