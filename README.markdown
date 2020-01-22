@@ -1,6 +1,8 @@
 aeson-match-qq
 ==============
 
+[![Build status](https://circleci.com/gh/supki/aeson-match-qq.svg?style=svg)](https://circleci.com/gh/supki/aeson-match-qq)
+
 Declarative JSON matchers.
 
 Motivation
