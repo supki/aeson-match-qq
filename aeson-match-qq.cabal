@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: cb18a7fbeb15e04f292266f5b13bd0d7e7d6e17baf75f569ded1cd57a262f423
+-- hash: 5e2a9ddd1307601e11361677e9655585c5377123c9215e84d2285a89bec61853
 
 name:           aeson-match-qq
 version:        1.0.0
@@ -14,6 +14,7 @@ category:       Web
 maintainer:     matvey.aksenov@gmail.com
 copyright:      Matvey Aksenov 2020
 license:        BSD2
+license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.markdown
