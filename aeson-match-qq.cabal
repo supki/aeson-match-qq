@@ -4,11 +4,11 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5e2a9ddd1307601e11361677e9655585c5377123c9215e84d2285a89bec61853
+-- hash: e7acbabc06f912fe2b0617d8c1c1491874eb81a49df7c6df3d294a69ea828906
 
 name:           aeson-match-qq
 version:        1.0.0
-synopsis:       Matching Aeson values with a quasiquoter
+synopsis:       Declarative JSON matchers.
 description:    See README.markdown
 category:       Web
 maintainer:     matvey.aksenov@gmail.com
@@ -33,7 +33,7 @@ library
   build-depends:
       aeson
     , attoparsec
-    , base >=4.7 && <5
+    , base >=4.11 && <5
     , bytestring
     , either
     , haskell-src-meta
@@ -57,7 +57,7 @@ test-suite spec
       aeson
     , aeson-match-qq
     , aeson-qq
-    , base >=4.7 && <5
+    , base >=4.11 && <5
     , hspec
     , unordered-containers
   default-language: Haskell2010
