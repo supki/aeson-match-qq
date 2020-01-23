@@ -1,6 +1,6 @@
 name: aeson-match-qq
 version: 1.0.0
-synopsis: Matching Aeson values with a quasiquoter
+synopsis: Declarative JSON matchers.
 description: See README.markdown
 category: Web
 maintainer: matvey.aksenov@gmail.com
@@ -10,7 +10,7 @@ extra-source-files:
   - README.markdown
 
 dependencies:
-  - base >= 4.7 && < 5
+  - base >= 4.11 && < 5
 
 library:
   dependencies:
