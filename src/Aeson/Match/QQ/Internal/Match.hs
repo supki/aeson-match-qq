@@ -58,14 +58,14 @@ match =
         mismatched
         pure mempty
       (Array Box {knownValues, extendable}, Aeson.Array arr) ->
-        let knownValuesL = Vector.length knownValues
-            arrL = Vector.length arr
-            fold f =
+        let fold f =
               Vector.ifoldr (\i v a -> liftA2 HashMap.union a (f i v)) (pure mempty)
+            extraValues =
+              Vector.drop (Vector.length knownValues) arr
         in
           unless
-            (extendable || knownValuesL == arrL)
-            (extraArrayValues (reverse path) (Vector.drop knownValuesL arr)) *>
+            (extendable || Vector.null extraValues)
+            (extraArrayValues (reverse path) extraValues) *>
           fold
             (\i v -> maybe (missingPathElem (reverse path) (Idx i)) (go (Idx i : path) v) (arr Vector.!? i))
             knownValues
@@ -73,14 +73,14 @@ match =
         mismatched
         pure mempty
       (Object Box {knownValues, extendable}, Aeson.Object o) ->
-        let knownValuesL = HashMap.size knownValues
-            oL = HashMap.size o
-            fold f =
+        let fold f =
               HashMap.foldrWithKey (\k v a -> liftA2 HashMap.union a (f k v)) (pure mempty)
+            extraValues =
+              HashMap.difference o knownValues
         in
           unless
-            (extendable || knownValuesL == oL)
-            (extraObjectValues (reverse path) (HashMap.difference o knownValues)) *>
+            (extendable || HashMap.null extraValues)
+            (extraObjectValues (reverse path) extraValues) *>
           fold
             (\k v -> maybe (missingPathElem (reverse path) (Key k)) (go (Key k : path) v) (HashMap.lookup k o))
             knownValues

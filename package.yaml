@@ -8,6 +8,7 @@ copyright: Matvey Aksenov 2020
 license: BSD2
 extra-source-files:
   - README.markdown
+  - CHANGELOG.markdown
 
 dependencies:
   - base >= 4.11 && < 5
