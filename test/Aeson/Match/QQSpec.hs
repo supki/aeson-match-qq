@@ -88,6 +88,13 @@ spec = do
       match [qq| {foo: _hole} |] [aesonQQ| {foo: {bar: {baz: [1, 4]}}} |] `shouldBe`
         pure (HashMap.singleton "hole" [aesonQQ| {bar: {baz: [1, 4]}} |])
 
+    -- https://github.com/supki/aeson-match-qq/issues/7
+    it "#7" $ do
+      match [qq| {foo: _} |] [aesonQQ| {} |] `shouldBe`
+        missingPathElem [] "foo"
+      match [qq| [_] |] [aesonQQ| [] |] `shouldBe`
+        missingPathElem [] (Idx 0)
+
 newtype ToEncoding a = ToEncoding { unToEncoding :: a }
     deriving (Show, Eq, Num)
 
