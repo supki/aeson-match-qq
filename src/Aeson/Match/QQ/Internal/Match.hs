@@ -11,6 +11,7 @@ import           Control.Monad (unless)
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
 import           Data.Either.Validation (Validation, eitherToValidation)
+import           Data.Foldable (for_)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.List.NonEmpty (NonEmpty)
@@ -20,7 +21,7 @@ import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
 import           Prelude hiding (any, null)
 
-import           Aeson.Match.QQ.Internal.Value (Value(..), Box(..))
+import           Aeson.Match.QQ.Internal.Value (Value(..), Box(..), TypeSig(..), Type(..), Nullable(..))
 
 
 match :: Value Aeson.Value -> Aeson.Value -> Validation (NonEmpty VE) (HashMap Text Aeson.Value)
@@ -30,10 +31,11 @@ match =
   go path matcher given = do
     let mismatched = mismatch (reverse path) matcher given
     case (matcher, given) of
-      (Any Nothing, _) ->
-        pure mempty
-      (Any (Just name), val) ->
-        pure (HashMap.singleton name val)
+      (Any holeTypeO nameO, val) -> do
+        for_ holeTypeO $ \holeType ->
+          unless (holeTypeMatch holeType val)
+            mismatched
+        pure (maybe mempty (\name -> HashMap.singleton name val) nameO)
       (Null, Aeson.Null) ->
         pure mempty
       (Null, _) -> do
@@ -90,6 +92,17 @@ match =
       (Ext val, val') -> do
         unless (val == val') mismatched
         pure mempty
+
+holeTypeMatch :: TypeSig -> Aeson.Value -> Bool
+holeTypeMatch type_ val =
+  case (type_, val) of
+    (TypeSig {nullable = Nullable}, Aeson.Null) -> True
+    (TypeSig {type_ = BoolT} , Aeson.Bool {}) -> True
+    (TypeSig {type_ = NumberT} , Aeson.Number {}) -> True
+    (TypeSig {type_ = StringT} , Aeson.String {}) -> True
+    (TypeSig {type_ = ArrayT} , Aeson.Array {}) -> True
+    (TypeSig {type_ = ObjectT} , Aeson.Object {}) -> True
+    (_, _) -> False
 
 mismatch :: Path -> Value Aeson.Value -> Aeson.Value -> Validation (NonEmpty VE) a
 mismatch path matcher given =

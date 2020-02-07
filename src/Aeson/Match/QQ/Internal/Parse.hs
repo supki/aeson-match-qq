@@ -5,14 +5,17 @@ module Aeson.Match.QQ.Internal.Parse
   ( parse
   ) where
 
-import           Control.Applicative ((<|>))
+import           Control.Applicative ((<|>), optional)
 import qualified Data.Aeson.Parser as Aeson
 import qualified Data.ByteString as ByteString
 -- cannot use .Text here due to .Aeson parsers being tied to .ByteString
 import qualified Data.Attoparsec.ByteString as Atto
+import           Data.Bool (bool)
 import           Data.ByteString (ByteString)
 import qualified Data.Char as Char
+import           Data.Foldable (asum)
 import qualified Data.HashMap.Strict as HashMap
+import           Data.Maybe (isJust)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -22,7 +25,7 @@ import           Language.Haskell.Meta.Parse (parseExp)
 import           Language.Haskell.TH (Exp(..))
 import           Prelude hiding (any, null)
 
-import           Aeson.Match.QQ.Internal.Value (Value(..), Box(..))
+import           Aeson.Match.QQ.Internal.Value (Value(..), Box(..), TypeSig(..), Type(..), Nullable(..))
 
 
 parse :: ByteString -> Either String (Value Exp)
@@ -61,7 +64,10 @@ value = do
 any :: Atto.Parser (Value Exp)
 any = do
   _ <- Atto.word8 AnyP
-  fmap (Any . Just) key <|> pure (Any Nothing)
+  name <- fmap Just key <|> pure Nothing
+  spaces
+  expectedType <- optional typeSig
+  pure (Any expectedType name)
 
 null :: Atto.Parser (Value Exp)
 null =
@@ -180,6 +186,23 @@ haskellExp =
     str <- Atto.takeWhile1 (/= CloseCurlyBracketP) <* Atto.word8 CloseCurlyBracketP
     either fail pure (parseExp (Text.unpack (Text.decodeUtf8 str)))
 
+typeSig :: Atto.Parser TypeSig
+typeSig = do
+  _ <- Atto.word8 ColonP
+  spaces
+  asum
+    [ p "bool" BoolT
+    , p "number" NumberT
+    , p "string" StringT
+    , p "array" ArrayT
+    , p "object" ObjectT
+    ]
+ where
+  p name typeName = do
+    _ <- Atto.string name
+    q <- optional (Atto.word8 QuestionMarkP)
+    pure (TypeSig typeName (bool NonNullable Nullable (isJust q)))
+
 -- This function has been stolen from aeson.
 -- ref: https://hackage.haskell.org/package/aeson-1.4.6.0/docs/src/Data.Aeson.Parser.Internal.html#skipSpace
 spaces :: Atto.Parser ()
@@ -216,3 +239,6 @@ pattern SpaceP = 0x20
 pattern NewLineP = 0x0a
 pattern CRP = 0x0d
 pattern TabP = 0x09
+
+pattern QuestionMarkP :: Word8
+pattern QuestionMarkP = 63 -- '?'

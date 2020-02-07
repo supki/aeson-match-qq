@@ -16,9 +16,11 @@ spec :: Spec
 spec = do
   describe "parse" $
     it "specs" $ do
-      [qq| _ |] `shouldBe` Any Nothing
-      [qq| _hole |] `shouldBe` Any (pure "hole")
-      [qq| _"fancy hole" |] `shouldBe` Any (pure "fancy hole")
+      [qq| _ |] `shouldBe` Any Nothing Nothing
+      [qq| _hole |] `shouldBe` Any Nothing (pure "hole")
+      [qq| _"fancy hole" |] `shouldBe` Any Nothing (pure "fancy hole")
+      [qq| _typed-hole : number |] `shouldBe` Any (pure (TypeSig NumberT NonNullable)) (pure "typed-hole")
+      [qq| _typed-nullable-hole : number? |] `shouldBe` Any (pure (TypeSig NumberT Nullable)) (pure "typed-nullable-hole")
 
       [qq| null |] `shouldBe` Null
 
@@ -35,9 +37,9 @@ spec = do
       [qq| [1, 2, 3] |] `shouldBe`
         Array Box {knownValues = [Number 1, Number 2, Number 3], extendable = False}
       [qq| [1, _, 3] |] `shouldBe`
-        Array Box {knownValues = [Number 1, Any Nothing, Number 3], extendable = False}
+        Array Box {knownValues = [Number 1, Any Nothing Nothing, Number 3], extendable = False}
       [qq| [1, _, 3, ...] |] `shouldBe`
-        Array Box {knownValues = [Number 1, Any Nothing, Number 3], extendable = True}
+        Array Box {knownValues = [Number 1, Any Nothing Nothing, Number 3], extendable = True}
 
       [qq| {} |] `shouldBe`
         Object Box {knownValues = [], extendable = False}
@@ -62,10 +64,13 @@ spec = do
       [qq| 4 |] `shouldMatch` [aesonQQ| 4 |]
       [qq| "foo" |] `shouldMatch` [aesonQQ| "foo" |]
       [qq| [1, 2, 3] |] `shouldMatch` [aesonQQ| [1, 2, 3] |]
-      [qq| [1, 2, 3, ...] |] `shouldMatch` [aesonQQ| [1, 2, 3, 4] |]
+      [qq| [1, _ : number, 3, ...] |] `shouldMatch` [aesonQQ| [1, 2, 3, 4] |]
+      [qq| [1, _ : string] |] `shouldMatch` [aesonQQ| [1, "foo"] |]
       [qq| {foo: 4, bar: 7} |] `shouldMatch` [aesonQQ| {foo: 4, bar: 7} |]
       [qq| {foo: 4, bar: 7, ...} |] `shouldMatch` [aesonQQ| {foo: 4, bar: 7, baz: 11} |]
       [qq| #{1 + 2 :: Int} |] `shouldMatch` [aesonQQ| 3 |]
+      [qq| {foo: _ : number, bar: 7} |] `shouldMatch` [aesonQQ| {foo: 4, bar: 7} |]
+      [qq| {foo: _ : number?, bar: 7} |] `shouldMatch` [aesonQQ| {foo: null, bar: 7} |]
 
       [qq| null |] `shouldNotMatch` [aesonQQ| 4 |]
       [qq| true |] `shouldNotMatch` [aesonQQ| false |]
@@ -74,11 +79,14 @@ spec = do
       [qq| "foo" |] `shouldNotMatch` [aesonQQ| "bar" |]
       [qq| [1, 2, 3] |] `shouldNotMatch` [aesonQQ| [1, 2, 3, 4] |]
       [qq| [1, 2, 3, ...] |] `shouldNotMatch` [aesonQQ| [1, 2] |]
+      [qq| [1, _ : string] |] `shouldNotMatch` [aesonQQ| [1, 2] |]
       [qq| [1, 2, 3, ...] |] `shouldNotMatch` [aesonQQ| [1, 2, 4] |]
       [qq| {foo: 4, bar: 7} |] `shouldNotMatch` [aesonQQ| {foo: 7, bar: 4} |]
       [qq| {foo: 4, bar: 7} |] `shouldNotMatch` [aesonQQ| {foo: 4, baz: 7} |]
       [qq| {foo: 4, bar: 7, ...} |] `shouldNotMatch` [aesonQQ| {foo: 4, baz: 11} |]
       [qq| #{1 + 2 :: Int} |] `shouldNotMatch` [aesonQQ| 4 |]
+      [qq| {foo: _ : number, bar: 7} |] `shouldNotMatch` [aesonQQ| {foo: "foo", bar: 7} |]
+      [qq| {foo: _ : number, bar: 7} |] `shouldNotMatch` [aesonQQ| {foo: null, bar: 7} |]
 
     it "paths" $ do
       match [qq| {foo: {bar: {baz: [1, 4]}}} |] [aesonQQ| {foo: {bar: {baz: [1, 7]}}} |] `shouldBe`

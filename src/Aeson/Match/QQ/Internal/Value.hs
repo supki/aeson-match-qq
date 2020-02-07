@@ -1,7 +1,9 @@
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 module Aeson.Match.QQ.Internal.Value
@@ -9,6 +11,9 @@ module Aeson.Match.QQ.Internal.Value
   , Box(..)
   , Array
   , Object
+  , TypeSig(..)
+  , Type(..)
+  , Nullable(..)
   ) where
 
 import           Data.Aeson ((.=))
@@ -28,7 +33,7 @@ import           Prelude hiding (any, null)
 
 
 data Value ext
-  = Any (Maybe Text)
+  = Any (Maybe TypeSig) (Maybe Text)
   | Null
   | Bool Bool
   | Number Scientific
@@ -41,8 +46,9 @@ data Value ext
 instance Aeson.ToJSON ext => Aeson.ToJSON (Value ext) where
   toJSON =
     Aeson.object . \case
-      Any name ->
+      Any type_ name ->
         [ "type" .= ("any" :: Text)
+        , "expected-type" .= type_
         , "name" .= name
         ]
       Null ->
@@ -94,8 +100,8 @@ type Object ext = Box (HashMap Text (Value ext))
 -- undefined for some datatypes.
 instance ext ~ Exp => Lift (Value ext) where
   lift = \case
-    Any name ->
-      [| Any $(pure (maybe (ConE 'Nothing) (AppE (ConE 'Just) . AppE (VarE 'fromString) . LitE . textL) name)) :: Value Aeson.Value |]
+    Any type_ name ->
+      [| Any type_ $(pure (maybe (ConE 'Nothing) (AppE (ConE 'Just) . AppE (VarE 'fromString) . LitE . textL) name)) :: Value Aeson.Value |]
     Null ->
       [| Null :: Value Aeson.Value |]
     Bool b ->
@@ -123,3 +129,43 @@ instance ext ~ Exp => Lift (Value ext) where
    where
     textL =
       StringL . Text.unpack
+
+data TypeSig = TypeSig
+  { type_    :: Type
+  , nullable :: Nullable
+  } deriving (Show, Eq, Lift)
+
+instance Aeson.ToJSON TypeSig where
+  toJSON TypeSig {..} =
+    Aeson.object
+      [ "type" .= type_
+      , "nullable" .= nullable
+      ]
+
+data Type
+  = BoolT
+  | NumberT
+  | StringT
+  | ArrayT
+  | ObjectT
+    deriving (Show, Eq, Lift)
+
+instance Aeson.ToJSON Type where
+  toJSON =
+    Aeson.toJSON . \case
+      BoolT {} -> "bool" :: Text
+      NumberT {} -> "number"
+      StringT {} -> "string"
+      ArrayT {} -> "array"
+      ObjectT {} -> "object"
+
+data Nullable
+  = Nullable
+  | NonNullable
+    deriving (Show, Eq, Lift)
+
+instance Aeson.ToJSON Nullable where
+  toJSON =
+    Aeson.toJSON . \case
+      Nullable -> True
+      NonNullable -> False

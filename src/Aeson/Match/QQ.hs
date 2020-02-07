@@ -3,6 +3,9 @@ module Aeson.Match.QQ
   , Array
   , Object
   , Box(..)
+  , TypeSig(..)
+  , Type(..)
+  , Nullable(..)
   , Path
   , PathElem(..)
   , parse
@@ -20,7 +23,7 @@ import           Language.Haskell.TH.Syntax (Lift(..))
 
 import           Aeson.Match.QQ.Internal.Match (Path, PathElem(..), match, mismatch, missingPathElem, extraArrayValues, extraObjectValues)
 import           Aeson.Match.QQ.Internal.Parse (parse)
-import           Aeson.Match.QQ.Internal.Value (Value(..), Box(..), Array, Object)
+import           Aeson.Match.QQ.Internal.Value (Value(..), Box(..), Array, Object, TypeSig(..), Type(..), Nullable(..))
 
 
 qq :: QuasiQuoter
