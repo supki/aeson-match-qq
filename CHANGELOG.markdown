@@ -1,5 +1,5 @@
-next
-====
+1.1.0
+=====
 
   * Optionally typed holes (https://github.com/supki/aeson-match-qq/pull/9)
 
