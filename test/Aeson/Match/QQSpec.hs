@@ -103,6 +103,21 @@ spec = do
       match [qq| [_] |] [aesonQQ| [] |] `shouldBe`
         missingPathElem [] (Idx 0)
 
+    -- https://github.com/supki/aeson-match-qq/issues/10
+    it "#10" $ do
+      [qq| {foo: []} |] `shouldBe`
+        Object
+          (Box
+            { knownValues = [("foo", Array (Box {knownValues = [], extendable = False}))]
+            , extendable = False
+            })
+      [qq| [{}] |] `shouldBe`
+        Array
+          (Box
+            { knownValues = [Object (Box {knownValues = [], extendable = False})]
+            , extendable = False
+            })
+
 newtype ToEncoding a = ToEncoding { unToEncoding :: a }
     deriving (Show, Eq, Num)
 

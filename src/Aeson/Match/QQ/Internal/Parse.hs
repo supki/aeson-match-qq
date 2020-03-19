@@ -95,7 +95,8 @@ array = do
   spaces
   b <- Atto.peekWord8'
   case b of
-    CloseSquareBracketP ->
+    CloseSquareBracketP -> do
+      _ <- Atto.word8 CloseSquareBracketP
       pure (Array Box {knownValues = Vector.empty, extendable = False})
     _ -> do
       loop [] 0
@@ -133,7 +134,8 @@ object = do
   spaces
   b <- Atto.peekWord8'
   case b of
-    CloseCurlyBracketP ->
+    CloseCurlyBracketP -> do
+      _ <- Atto.word8 CloseCurlyBracketP
       pure (Object Box {knownValues = HashMap.empty, extendable = False})
     _ ->
       loop []

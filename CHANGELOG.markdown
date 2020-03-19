@@ -1,3 +1,8 @@
+1.2.0
+=====
+
+  * Fixed a couple of parsing edge cases (https://github.com/supki/aeson-match-qq/pull/11)
+
 1.1.0
 =====
 
