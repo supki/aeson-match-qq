@@ -1,20 +1,20 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2cf49c3c176aae86e39190d8aeb04288afe12de46702d55f3587e474ea2b368a
+-- hash: 174333225df442ad50a9934f79641ff23ead99eed7f4db38a26048cecac2cfa6
 
 name:           aeson-match-qq
-version:        1.2.0
+version:        1.3.0
 synopsis:       Declarative JSON matchers.
 description:    See README.markdown
 category:       Web
 homepage:       https://github.com/supki/aeson-match-qq#readme
 bug-reports:    https://github.com/supki/aeson-match-qq/issues
 maintainer:     matvey.aksenov@gmail.com
-copyright:      Matvey Aksenov 2020
+copyright:      Matvey Aksenov 2021
 license:        BSD2
 license-file:   LICENSE
 build-type:     Simple
@@ -36,7 +36,7 @@ library
       Paths_aeson_match_qq
   hs-source-dirs:
       src
-  ghc-options: -funbox-strict-fields -Wall -Werror
+  ghc-options: -funbox-strict-fields -Wall
   build-depends:
       aeson
     , attoparsec
@@ -59,7 +59,7 @@ test-suite spec
       Paths_aeson_match_qq
   hs-source-dirs:
       test
-  ghc-options: -Wall -Werror -threaded -with-rtsopts=-N
+  ghc-options: -Wall -threaded -with-rtsopts=-N
   build-depends:
       aeson
     , aeson-match-qq

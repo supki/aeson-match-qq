@@ -120,7 +120,7 @@ instance ext ~ Exp => Lift (Value ext) where
     Object Box {knownValues, extendable} -> [|
         Object Box
           { knownValues =
-              HashMap.fromList $(fmap (ListE . map (\(k, v) -> TupE [LitE (textL k), v]) . HashMap.toList) (traverse lift knownValues))
+              HashMap.fromList $(fmap (ListE . map (\(k, v) -> TupE [Just (LitE (textL k)), Just v]) . HashMap.toList) (traverse lift knownValues))
           , extendable
           } :: Value Aeson.Value
       |]
