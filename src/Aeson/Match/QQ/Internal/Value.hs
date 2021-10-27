@@ -28,7 +28,7 @@ import qualified Data.Text as Text
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
 import           Language.Haskell.TH (Exp(..), Lit(..))
-import           Language.Haskell.TH.Syntax (Lift(..))
+import           Language.Haskell.TH.Syntax (Lift(..), unsafeTExpCoerce)
 import           Prelude hiding (any, null)
 
 
@@ -129,6 +129,8 @@ instance ext ~ Exp => Lift (Value ext) where
    where
     textL =
       StringL . Text.unpack
+  liftTyped =
+    unsafeTExpCoerce . lift
 
 data TypeSig = TypeSig
   { type_    :: Type
