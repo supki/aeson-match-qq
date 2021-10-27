@@ -1,4 +1,8 @@
 resolver: lts-18.13
 packages:
   - '.'
+extra-deps:
+  - 'aeson-2.0.1.0'
+  - 'aeson-qq-0.8.4'
+  - 'semialign-1.2'
 allow-newer: true

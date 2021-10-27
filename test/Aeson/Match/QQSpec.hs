@@ -87,6 +87,10 @@ spec = do
       [qq| #{1 + 2 :: Int} |] `shouldNotMatch` [aesonQQ| 4 |]
       [qq| {foo: _ : number, bar: 7} |] `shouldNotMatch` [aesonQQ| {foo: "foo", bar: 7} |]
       [qq| {foo: _ : number, bar: 7} |] `shouldNotMatch` [aesonQQ| {foo: null, bar: 7} |]
+      [qq|
+        { foo: _ : string
+        , bar: 7
+        } |] `shouldNotMatch` [aesonQQ| {foo: null, bar: 7} |]
 
     it "paths" $ do
       match [qq| {foo: {bar: {baz: [1, 4]}}} |] [aesonQQ| {foo: {bar: {baz: [1, 7]}}} |] `shouldBe`

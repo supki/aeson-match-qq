@@ -4,12 +4,14 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ViewPatterns #-}
 module Aeson.Match.QQ.Internal.Match where
 
 import           Control.Applicative (liftA2)
 import           Control.Monad (unless)
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as Aeson (toHashMapText)
 import           Data.Either.Validation (Validation, eitherToValidation)
 import           Data.Foldable (for_)
 import           Data.HashMap.Strict (HashMap)
@@ -74,7 +76,7 @@ match =
       (Array _, _) -> do
         mismatched
         pure mempty
-      (Object Box {knownValues, extendable}, Aeson.Object o) ->
+      (Object Box {knownValues, extendable}, Aeson.Object (Aeson.toHashMapText -> o)) ->
         let fold f =
               HashMap.foldrWithKey (\k v a -> liftA2 HashMap.union a (f k v)) (pure mempty)
             extraValues =
