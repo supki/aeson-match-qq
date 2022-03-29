@@ -18,6 +18,7 @@ module Aeson.Match.QQ
   ) where
 
 import           Data.String (IsString(..))
+import qualified Data.Text.Encoding as Text
 import           Language.Haskell.TH.Quote (QuasiQuoter(..))
 import           Language.Haskell.TH.Syntax (Lift(..))
 
@@ -29,7 +30,7 @@ import           Aeson.Match.QQ.Internal.Value (Value(..), Box(..), Array, Objec
 qq :: QuasiQuoter
 qq = QuasiQuoter
   { quoteExp = \str ->
-      case parse (fromString str) of
+      case parse (Text.encodeUtf8 (fromString str)) of
         Left err ->
           error ("Aeson.Match.QQ.qq: " ++ err)
         Right val ->

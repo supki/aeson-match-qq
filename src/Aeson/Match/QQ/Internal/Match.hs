@@ -26,7 +26,10 @@ import           Prelude hiding (any, null)
 import           Aeson.Match.QQ.Internal.Value (Value(..), Box(..), TypeSig(..), Type(..), Nullable(..))
 
 
-match :: Value Aeson.Value -> Aeson.Value -> Validation (NonEmpty VE) (HashMap Text Aeson.Value)
+match
+  :: Value Aeson.Value
+  -> Aeson.Value
+  -> Validation (NonEmpty VE) (HashMap Text Aeson.Value)
 match =
   go []
  where
