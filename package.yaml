@@ -1,10 +1,10 @@
 name: aeson-match-qq
-version: 1.2.0
+version: 1.2.1
 synopsis: Declarative JSON matchers.
 description: See README.markdown
 category: Web
 maintainer: matvey.aksenov@gmail.com
-copyright: Matvey Aksenov 2020
+copyright: Matvey Aksenov 2022
 license: BSD2
 extra-source-files:
   - README.markdown

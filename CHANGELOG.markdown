@@ -1,3 +1,8 @@
+1.2.1
+=====
+
+  * Proper Unicode support (https://github.com/supki/aeson-match-qq/pull/14)
+
 1.2.0
 =====
 

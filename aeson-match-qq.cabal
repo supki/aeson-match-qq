@@ -7,14 +7,14 @@ cabal-version: 1.12
 -- hash: 2cf49c3c176aae86e39190d8aeb04288afe12de46702d55f3587e474ea2b368a
 
 name:           aeson-match-qq
-version:        1.2.0
+version:        1.2.1
 synopsis:       Declarative JSON matchers.
 description:    See README.markdown
 category:       Web
 homepage:       https://github.com/supki/aeson-match-qq#readme
 bug-reports:    https://github.com/supki/aeson-match-qq/issues
 maintainer:     matvey.aksenov@gmail.com
-copyright:      Matvey Aksenov 2020
+copyright:      Matvey Aksenov 2022
 license:        BSD2
 license-file:   LICENSE
 build-type:     Simple
