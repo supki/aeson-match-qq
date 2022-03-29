@@ -122,6 +122,9 @@ spec = do
             , extendable = False
             })
 
+    it "#13" $
+      [qq| "Слава Україні" |] `shouldMatch` [aesonQQ| "Слава Україні" |]
+
 newtype ToEncoding a = ToEncoding { unToEncoding :: a }
     deriving (Show, Eq, Num)
 

@@ -4,17 +4,17 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: eeb53a9a8a4433aa06146edfc817e03b1cef449f46c1866e6302e4f9bdfee782
+-- hash: 5d1f836e56344a26982a1f67c2ccb2010e6ac6be94d88f239c4b15c9fe108df6
 
 name:           aeson-match-qq
-version:        1.4.0
+version:        1.4.1
 synopsis:       Declarative JSON matchers.
 description:    See README.markdown
 category:       Web
 homepage:       https://github.com/supki/aeson-match-qq#readme
 bug-reports:    https://github.com/supki/aeson-match-qq/issues
 maintainer:     matvey.aksenov@gmail.com
-copyright:      Matvey Aksenov 2021
+copyright:      Matvey Aksenov 2022
 license:        BSD2
 license-file:   LICENSE
 build-type:     Simple
