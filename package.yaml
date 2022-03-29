@@ -4,7 +4,7 @@ synopsis: Declarative JSON matchers.
 description: See README.markdown
 category: Web
 maintainer: matvey.aksenov@gmail.com
-copyright: Matvey Aksenov 2021
+copyright: Matvey Aksenov 2022
 license: BSD2
 extra-source-files:
   - README.markdown
