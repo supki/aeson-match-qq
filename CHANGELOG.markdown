@@ -1,3 +1,8 @@
+1.4.2
+=====
+
+  * Unordered arrays (https://github.com/supki/aeson-match-qq/pull/15)
+
 1.4.1
 =====
 

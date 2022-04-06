@@ -12,13 +12,6 @@ packages:
   original:
     hackage: aeson-2.0.1.0
 - completed:
-    hackage: aeson-qq-0.8.4@sha256:ad08ce7e39fe8fdd8d371fc5e3129380d8e99083513b1a6d44cda07f85d13fd2,2082
-    pantry-tree:
-      size: 509
-      sha256: 172c57ee50bbf8130b8f5feb798becfe157bf047d726eb36e8c8dc3df118b652
-  original:
-    hackage: aeson-qq-0.8.4
-- completed:
     hackage: semialign-1.2@sha256:d3e7e3a5fe509f30bf2121d94c54b586217f2dc69a47ffede3633ddbc12cba68,2743
     pantry-tree:
       size: 537
@@ -27,7 +20,7 @@ packages:
     hackage: semialign-1.2
 snapshots:
 - completed:
-    size: 586268
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/13.yaml
-    sha256: d9e658a22cfe8d87a64fdf219885f942fef5fe2bcb156a9800174911c5da2443
-  original: lts-18.13
+    size: 590100
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/28.yaml
+    sha256: 428ec8d5ce932190d3cbe266b9eb3c175cd81e984babf876b64019e2cbe4ea68
+  original: lts-18.28

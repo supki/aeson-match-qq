@@ -7,7 +7,7 @@ cabal-version: 1.12
 -- hash: 5d1f836e56344a26982a1f67c2ccb2010e6ac6be94d88f239c4b15c9fe108df6
 
 name:           aeson-match-qq
-version:        1.4.1
+version:        1.4.2
 synopsis:       Declarative JSON matchers.
 description:    See README.markdown
 category:       Web
