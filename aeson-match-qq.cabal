@@ -1,10 +1,8 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.34.6.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 2cf49c3c176aae86e39190d8aeb04288afe12de46702d55f3587e474ea2b368a
 
 name:           aeson-match-qq
 version:        1.2.1
@@ -42,6 +40,7 @@ library
     , attoparsec
     , base >=4.11 && <5
     , bytestring
+    , containers
     , either
     , haskell-src-meta
     , scientific

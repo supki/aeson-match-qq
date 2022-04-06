@@ -19,6 +19,7 @@ library:
     - aeson
     - attoparsec
     - bytestring
+    - containers
     - either
     - haskell-src-meta
     - scientific
