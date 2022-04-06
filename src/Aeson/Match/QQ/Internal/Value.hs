@@ -39,6 +39,7 @@ data Value ext
   | Number Scientific
   | String Text
   | Array (Array ext)
+  | ArrayUO (Array ext)
   | Object (Object ext)
   | Ext ext
     deriving (Show, Eq)
@@ -68,6 +69,10 @@ instance Aeson.ToJSON ext => Aeson.ToJSON (Value ext) where
         ]
       Array v ->
         [ "type" .= ("array" :: Text)
+        , "value" .= v
+        ]
+      ArrayUO v ->
+        [ "type" .= ("array-unordered" :: Text)
         , "value" .= v
         ]
       Object v ->
@@ -117,6 +122,13 @@ instance ext ~ Exp => Lift (Value ext) where
           , extendable
           } :: Value Aeson.Value
       |]
+    ArrayUO Box {knownValues, extendable} -> [|
+        ArrayUO Box
+          { knownValues =
+              Vector.fromList $(fmap (ListE . Vector.toList) (traverse lift knownValues))
+          , extendable
+          } :: Value Aeson.Value
+      |]
     Object Box {knownValues, extendable} -> [|
         Object Box
           { knownValues =
@@ -147,6 +159,7 @@ data Type
   | NumberT
   | StringT
   | ArrayT
+  | ArrayUOT
   | ObjectT
     deriving (Show, Eq, Lift)
 
@@ -157,6 +170,7 @@ instance Aeson.ToJSON Type where
       NumberT {} -> "number"
       StringT {} -> "string"
       ArrayT {} -> "array"
+      ArrayUOT {} -> "array-unordered"
       ObjectT {} -> "object"
 
 data Nullable
