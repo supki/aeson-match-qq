@@ -49,6 +49,8 @@ value = do
       string
     OpenSquareBracketP ->
       array
+    OpenParenP ->
+      arrayUO
     OpenCurlyBracketP ->
       object
     HashP ->
@@ -127,6 +129,17 @@ array = do
           }
       _ ->
         error "impossible"
+
+arrayUO :: Atto.Parser (Value Exp)
+arrayUO = do
+  _ <- Atto.word8 OpenParenP
+  spaces
+  _ <- Atto.string "unordered"
+  spaces
+  _ <- Atto.word8 CloseParenP
+  spaces
+  Array box <- array
+  pure (ArrayUO box)
 
 object :: Atto.Parser (Value Exp)
 object = do
@@ -226,9 +239,14 @@ pattern OpenSquareBracketP, CloseSquareBracketP :: Word8
 pattern OpenSquareBracketP = 91 -- '['
 pattern CloseSquareBracketP = 93 -- ']'
 
+pattern OpenParenP, CloseParenP :: Word8
+pattern OpenParenP = 40 -- '('
+pattern CloseParenP = 41 -- ')'
+
 pattern OpenCurlyBracketP, CloseCurlyBracketP, ColonP :: Word8
 pattern OpenCurlyBracketP = 123 -- '{'
 pattern CloseCurlyBracketP = 125 -- '}'
+
 pattern ColonP = 58 -- ':'
 
 pattern ZeroP, NineP, MinusP :: Word8

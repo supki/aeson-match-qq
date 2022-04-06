@@ -12,11 +12,14 @@ import           Control.Monad (unless)
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as Aeson (toHashMapText)
-import           Data.Either.Validation (Validation, eitherToValidation)
-import           Data.Foldable (for_)
+import           Data.Either.Validation (Validation(..), eitherToValidation)
+import           Data.Foldable (for_, toList)
+import           Data.Bool (bool)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.List.NonEmpty (NonEmpty)
+import           Data.Maybe (mapMaybe)
+import qualified Data.Set as Set
 import           Data.String (IsString(..))
 import           Data.Text (Text)
 import           Data.Vector (Vector)
@@ -65,10 +68,11 @@ match =
         mismatched
         pure mempty
       (Array Box {knownValues, extendable}, Aeson.Array arr) ->
-        let fold f =
-              Vector.ifoldr (\i v a -> liftA2 HashMap.union a (f i v)) (pure mempty)
-            extraValues =
-              Vector.drop (Vector.length knownValues) arr
+        let
+          fold f =
+            Vector.ifoldr (\i v a -> liftA2 HashMap.union a (f i v)) (pure mempty)
+          extraValues =
+            Vector.drop (Vector.length knownValues) arr
         in
           unless
             (extendable || Vector.null extraValues)
@@ -77,6 +81,11 @@ match =
             (\i v -> maybe (missingPathElem (reverse path) (Idx i)) (go (Idx i : path) v) (arr Vector.!? i))
             knownValues
       (Array _, _) -> do
+        mismatched
+        pure mempty
+      (ArrayUO box, Aeson.Array arr) ->
+        matchArrayUO mismatched path box arr
+      (ArrayUO _, _) -> do
         mismatched
         pure mempty
       (Object Box {knownValues, extendable}, Aeson.Object (Aeson.toHashMapText -> o)) ->
@@ -108,6 +117,64 @@ holeTypeMatch type_ val =
     (TypeSig {type_ = ArrayT} , Aeson.Array {}) -> True
     (TypeSig {type_ = ObjectT} , Aeson.Object {}) -> True
     (_, _) -> False
+
+matchArrayUO
+  :: Validation (NonEmpty VE) (HashMap Text Aeson.Value)
+  -> Path
+  -> Box (Vector (Value Aeson.Value))
+  -> Vector Aeson.Value
+  -> Validation (NonEmpty VE) (HashMap Text Aeson.Value)
+matchArrayUO mismatched path Box {knownValues, extendable} xs = do
+  -- Collect possible indices in `xs` for each position in `knownValues`.
+  let indices = map (collectMatchingIndices (toList xs)) (toList knownValues)
+  -- Find all unique valid ways to map each position in `knownValues` to
+  -- a member of `xs`.
+  case allIndicesAssignments indices of
+    -- If no assignment has been found, we give up.
+    [] ->
+      mismatched
+    ivs : _
+      -- If some positions in `knownValues` cannot be mapped to
+      -- anything in `xs`, we give up.
+      | length ivs < length knownValues ->
+        mismatched
+      -- If there are some members of `xs` that aren't matched by
+      -- anything in `knownValues`, we check if the pattern is
+      -- extendable.
+      | length ivs < length xs && not extendable -> do
+        let is = Set.fromList (map fst ivs)
+            extraValues = Vector.ifilter (\i _ -> not (i `Set.member` is)) xs
+        extraArrayValues (reverse path) extraValues
+      | otherwise ->
+        pure (foldMap snd ivs)
+ where
+  collectMatchingIndices is knownValue =
+    imapMaybe matchingIndex is
+   where
+    matchingIndex i x =
+      case match knownValue x of
+        Success vs ->
+          Just (i, vs)
+        Failure _ ->
+          Nothing
+  allIndicesAssignments = map (map unI) . cleanUp . go Set.empty
+   where
+    go _ [] = [[]]
+    go known (is : iss) = do
+      (i, vs) <- is
+      bool (map (I (i, vs) :) (go (Set.insert i known) iss)) [] (i `Set.member` known)
+    cleanUp =
+      toList . Set.fromList . map (Set.toAscList . Set.fromList)
+
+newtype I = I { unI :: (Int, HashMap Text Aeson.Value) }
+
+instance Eq I where
+  I (a, _) == I (b, _) =
+    a == b
+
+instance Ord I where
+  I (a, _) `compare` I (b, _) =
+    a `compare` b
 
 mismatch :: Path -> Value Aeson.Value -> Aeson.Value -> Validation (NonEmpty VE) a
 mismatch path matcher given =
@@ -223,3 +290,7 @@ instance Aeson.ToJSON PathElem where
 instance IsString PathElem where
   fromString =
     Key . fromString
+
+imapMaybe :: (Int -> a -> Maybe b) -> [a] -> [b]
+imapMaybe f =
+  mapMaybe (uncurry f) . zip [0..]

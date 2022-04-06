@@ -41,6 +41,15 @@ spec = do
       [qq| [1, _, 3, ...] |] `shouldBe`
         Array Box {knownValues = [Number 1, Any Nothing Nothing, Number 3], extendable = True}
 
+      [qq| (unordered) [] |] `shouldBe`
+        ArrayUO Box {knownValues = [], extendable = False}
+      [qq| (unordered) [1, 2, 3] |] `shouldBe`
+        ArrayUO Box {knownValues = [Number 1, Number 2, Number 3], extendable = False}
+      [qq| (unordered) [1, _, 3] |] `shouldBe`
+        ArrayUO Box {knownValues = [Number 1, Any Nothing Nothing, Number 3], extendable = False}
+      [qq| (unordered) [1, _, 3, ...] |] `shouldBe`
+        ArrayUO Box {knownValues = [Number 1, Any Nothing Nothing, Number 3], extendable = True}
+
       [qq| {} |] `shouldBe`
         Object Box {knownValues = [], extendable = False}
       [qq| {foo: 4} |] `shouldBe`
@@ -66,6 +75,13 @@ spec = do
       [qq| [1, 2, 3] |] `shouldMatch` [aesonQQ| [1, 2, 3] |]
       [qq| [1, _ : number, 3, ...] |] `shouldMatch` [aesonQQ| [1, 2, 3, 4] |]
       [qq| [1, _ : string] |] `shouldMatch` [aesonQQ| [1, "foo"] |]
+      [qq| (unordered) [] |] `shouldMatch` [aesonQQ| [] |]
+      [qq| (unordered) [1, 2, 3] |] `shouldMatch` [aesonQQ| [1, 2, 3] |]
+      [qq| (unordered) [1, 2, 3] |] `shouldMatch` [aesonQQ| [2, 3, 1] |]
+      [qq| (unordered) [1, 2, 2] |] `shouldMatch` [aesonQQ| [2, 2, 1] |]
+      [qq| (unordered) [1, _, 2] |] `shouldMatch` [aesonQQ| [2, 2, 1] |]
+      [qq| (unordered) [1, 2, ...] |] `shouldMatch` [aesonQQ| [2, 3, 1] |]
+      [qq| (unordered) [1, 2, ...] |] `shouldMatch` [aesonQQ| [2, 2, 1] |]
       [qq| {foo: 4, bar: 7} |] `shouldMatch` [aesonQQ| {foo: 4, bar: 7} |]
       [qq| {foo: 4, bar: 7, ...} |] `shouldMatch` [aesonQQ| {foo: 4, bar: 7, baz: 11} |]
       [qq| #{1 + 2 :: Int} |] `shouldMatch` [aesonQQ| 3 |]
@@ -81,6 +97,9 @@ spec = do
       [qq| [1, 2, 3, ...] |] `shouldNotMatch` [aesonQQ| [1, 2] |]
       [qq| [1, _ : string] |] `shouldNotMatch` [aesonQQ| [1, 2] |]
       [qq| [1, 2, 3, ...] |] `shouldNotMatch` [aesonQQ| [1, 2, 4] |]
+      [qq| (unordered) [1, 2, 3] |] `shouldNotMatch` [aesonQQ| [1, 2, 4] |]
+      [qq| (unordered) [1, 2, 3, 4] |] `shouldNotMatch` [aesonQQ| [1, 2, 3] |]
+      [qq| (unordered) [1, 2] |] `shouldNotMatch` [aesonQQ| [1, 2, 2] |]
       [qq| {foo: 4, bar: 7} |] `shouldNotMatch` [aesonQQ| {foo: 7, bar: 4} |]
       [qq| {foo: 4, bar: 7} |] `shouldNotMatch` [aesonQQ| {foo: 4, baz: 7} |]
       [qq| {foo: 4, bar: 7, ...} |] `shouldNotMatch` [aesonQQ| {foo: 4, baz: 11} |]
@@ -99,6 +118,13 @@ spec = do
     it "named holes" $ do
       match [qq| {foo: _hole} |] [aesonQQ| {foo: {bar: {baz: [1, 4]}}} |] `shouldBe`
         pure (HashMap.singleton "hole" [aesonQQ| {bar: {baz: [1, 4]}} |])
+
+    context "unordered array" $
+      it "named holes" $ do
+        match [qq| (unordered) [1, _hole] |] [aesonQQ| [2, 1] |] `shouldBe`
+          pure (HashMap.singleton "hole" [aesonQQ| 2 |])
+        match [qq| (unordered) [{foo: _hole}, ...] |] [aesonQQ| [{foo: 2}, 1] |] `shouldBe`
+          pure (HashMap.singleton "hole" [aesonQQ| 2 |])
 
     -- https://github.com/supki/aeson-match-qq/issues/7
     it "#7" $ do
@@ -122,6 +148,7 @@ spec = do
             , extendable = False
             })
 
+    -- https://github.com/supki/aeson-match-qq/issues/13
     it "#13" $
       [qq| "Слава Україні" |] `shouldMatch` [aesonQQ| "Слава Україні" |]
 
