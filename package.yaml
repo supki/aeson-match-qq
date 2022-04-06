@@ -1,5 +1,5 @@
 name: aeson-match-qq
-version: 1.2.1
+version: 1.2.2
 synopsis: Declarative JSON matchers.
 description: See README.markdown
 category: Web
