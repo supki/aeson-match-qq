@@ -1,6 +1,7 @@
 1.3.1
 =====
 
+  * Unordered arrays (https://github.com/supki/aeson-match-qq/pull/15) 
   * Proper Unicode support (https://github.com/supki/aeson-match-qq/pull/14)
 
 1.3.0
