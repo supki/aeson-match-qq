@@ -19,6 +19,8 @@ module Aeson.Match.QQ.Internal.Value
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding.Internal as Aeson (encodingToLazyByteString)
+import           Data.CaseInsensitive (CI)
+import qualified Data.CaseInsensitive as CI
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.Scientific (Scientific)
@@ -38,6 +40,7 @@ data Value ext
   | Bool Bool
   | Number Scientific
   | String Text
+  | StringCI (CI Text)
   | Array (Array ext)
   | ArrayUO (Array ext)
   | Object (Object ext)
@@ -66,6 +69,10 @@ instance Aeson.ToJSON ext => Aeson.ToJSON (Value ext) where
       String v ->
         [ "type" .= ("string" :: Text)
         , "value" .= v
+        ]
+      StringCI v ->
+        [ "type" .= ("string-ci" :: Text)
+        , "value" .= CI.original v
         ]
       Array v ->
         [ "type" .= ("array" :: Text)
@@ -115,6 +122,8 @@ instance ext ~ Exp => Lift (Value ext) where
       [| Number (fromRational $(pure (LitE (RationalL (toRational n))))) :: Value Aeson.Value |]
     String str ->
       [| String (fromString $(pure (LitE (textL str)))) :: Value Aeson.Value |]
+    StringCI str ->
+      [| StringCI (fromString $(pure (LitE (textL (CI.original str))))) :: Value Aeson.Value |]
     Array Box {knownValues, extendable} -> [|
         Array Box
           { knownValues =
@@ -160,6 +169,7 @@ data Type
   = BoolT
   | NumberT
   | StringT
+  | StringCIT
   | ArrayT
   | ArrayUOT
   | ObjectT
@@ -171,6 +181,7 @@ instance Aeson.ToJSON Type where
       BoolT {} -> "bool" :: Text
       NumberT {} -> "number"
       StringT {} -> "string"
+      StringCIT {} -> "string-ci"
       ArrayT {} -> "array"
       ArrayUOT {} -> "array-unordered"
       ObjectT {} -> "object"

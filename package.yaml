@@ -19,6 +19,7 @@ library:
     - aeson
     - attoparsec
     - bytestring
+    - case-insensitive
     - containers
     - either
     - haskell-src-meta
