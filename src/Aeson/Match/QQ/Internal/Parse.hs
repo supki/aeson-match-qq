@@ -7,11 +7,12 @@ module Aeson.Match.QQ.Internal.Parse
 
 import           Control.Applicative ((<|>), optional)
 import qualified Data.Aeson.Parser as Aeson
+import qualified Data.Attoparsec.ByteString as Atto
 import qualified Data.ByteString as ByteString
 -- cannot use .Text here due to .Aeson parsers being tied to .ByteString
-import qualified Data.Attoparsec.ByteString as Atto
 import           Data.Bool (bool)
 import           Data.ByteString (ByteString)
+import qualified Data.CaseInsensitive as CI
 import qualified Data.Char as Char
 import           Data.Foldable (asum)
 import qualified Data.HashMap.Strict as HashMap
@@ -50,7 +51,7 @@ value = do
     OpenSquareBracketP ->
       array
     OpenParenP ->
-      arrayUO
+      arrayUO <|> stringCI
     OpenCurlyBracketP ->
       object
     HashP ->
@@ -90,6 +91,12 @@ number =
 string :: Atto.Parser (Value Exp)
 string =
   fmap String Aeson.jstring
+
+stringCI :: Atto.Parser (Value Exp)
+stringCI = do
+  _ <- Atto.string "(ci)"
+  spaces
+  fmap (StringCI . CI.mk) Aeson.jstring
 
 array :: Atto.Parser (Value Exp)
 array = do
@@ -132,11 +139,7 @@ array = do
 
 arrayUO :: Atto.Parser (Value Exp)
 arrayUO = do
-  _ <- Atto.word8 OpenParenP
-  spaces
-  _ <- Atto.string "unordered"
-  spaces
-  _ <- Atto.word8 CloseParenP
+  _ <- Atto.string "(unordered)"
   spaces
   Array box <- array
   pure (ArrayUO box)
@@ -209,7 +212,9 @@ typeSig = do
     [ p "bool" BoolT
     , p "number" NumberT
     , p "string" StringT
+    , p "ci-string" StringCIT
     , p "array" ArrayT
+    , p "unordered-array" ArrayUOT
     , p "object" ObjectT
     ]
  where
@@ -239,9 +244,10 @@ pattern OpenSquareBracketP, CloseSquareBracketP :: Word8
 pattern OpenSquareBracketP = 91 -- '['
 pattern CloseSquareBracketP = 93 -- ']'
 
-pattern OpenParenP, CloseParenP :: Word8
+pattern OpenParenP :: Word8
 pattern OpenParenP = 40 -- '('
-pattern CloseParenP = 41 -- ')'
+-- pattern CloseParenP :: Word8
+-- pattern CloseParenP = 41 -- ')'
 
 pattern OpenCurlyBracketP, CloseCurlyBracketP, ColonP :: Word8
 pattern OpenCurlyBracketP = 123 -- '{'

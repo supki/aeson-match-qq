@@ -10,9 +10,10 @@ import           Control.Applicative (liftA2)
 import           Control.Monad (unless)
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
+import           Data.Bool (bool)
+import qualified Data.CaseInsensitive as CI
 import           Data.Either.Validation (Validation(..), eitherToValidation)
 import           Data.Foldable (for_, toList)
-import           Data.Bool (bool)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.List.NonEmpty (NonEmpty)
@@ -65,6 +66,12 @@ match =
       (String _, _) -> do
         mismatched
         pure mempty
+      (StringCI str, Aeson.String str') -> do
+        unless (str == CI.mk str') mismatched
+        pure mempty
+      (StringCI _, _) -> do
+        mismatched
+        pure mempty
       (Array Box {knownValues, extendable}, Aeson.Array arr) ->
         let
           fold f =
@@ -112,7 +119,9 @@ holeTypeMatch type_ val =
     (TypeSig {type_ = BoolT} , Aeson.Bool {}) -> True
     (TypeSig {type_ = NumberT} , Aeson.Number {}) -> True
     (TypeSig {type_ = StringT} , Aeson.String {}) -> True
+    (TypeSig {type_ = StringCIT} , Aeson.String {}) -> True
     (TypeSig {type_ = ArrayT} , Aeson.Array {}) -> True
+    (TypeSig {type_ = ArrayUOT} , Aeson.Array {}) -> True
     (TypeSig {type_ = ObjectT} , Aeson.Object {}) -> True
     (_, _) -> False
 
