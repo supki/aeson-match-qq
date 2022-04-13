@@ -1,3 +1,8 @@
+next
+====
+
+  * Case insensitive strings (https://github.com/supki/aeson-match-qq/pull/17)
+
 1.4.2
 =====
 
