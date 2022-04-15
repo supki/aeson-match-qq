@@ -40,4 +40,17 @@ If a hole is named, its value will be returned from `match`
 
 `[match| {foo: {bar: _n} |]` will return `{n: 4}` if matched with `{foo: {bar: 4}}`
 
+### Case-insensitive strings
+
+A small addition to the JSON syntax that allows string matches that ignore case:
+
+`[match| (ci) "foo" |]` matches any of `"Foo"`, `"fOO"`, or `"FOO"`.
+
+### Unordered arrays
+
+A small addition to the JSON syntax that allows array matches that ignore the order
+of the elements, for example:
+
+`[match| (unordered) [1,2,3] |]` matches `[3, 1, 2]`.
+
   [0]: https://hackage.haskell.org/package/aeson-qq
