@@ -1,3 +1,12 @@
+1.3.2
+=====
+
+  * Improved matching errors for embedded Haskell values (https://github.com/supki/aeson-match-qq/pull/18)
+￼
+￼ * Separate error types for type- and value- level mismatches (https://github.com/supki/aeson-match-qq/pull/18)
+￼
+￼ * Case insensitive strings (https://github.com/supki/aeson-match-qq/pull/17)
+
 1.3.1
 =====
 
