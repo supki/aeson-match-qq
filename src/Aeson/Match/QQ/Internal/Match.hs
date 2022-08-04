@@ -25,7 +25,14 @@ import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
 import           Prelude hiding (any, null)
 
-import           Aeson.Match.QQ.Internal.Value (Value(..), Box(..), TypeSig(..), Type(..), Nullable(..))
+import           Aeson.Match.QQ.Internal.Value
+  ( Value(..)
+  , Box(..)
+  , TypeSig(..)
+  , Type(..)
+  , Nullable(..)
+  , embed
+  )
 
 
 match
@@ -109,9 +116,8 @@ match =
       (Object _, _) -> do
         mistyped
         pure mempty
-      (Ext val, val') -> do
-        unless (val == val') mismatched
-        pure mempty
+      (Ext val, val') ->
+        go path (embed val) val'
 
 holeTypeMatch :: TypeSig -> Aeson.Value -> Bool
 holeTypeMatch type_ val =

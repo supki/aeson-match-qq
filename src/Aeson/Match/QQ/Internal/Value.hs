@@ -6,6 +6,7 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 module Aeson.Match.QQ.Internal.Value
   ( Value(..)
   , Box(..)
@@ -14,10 +15,12 @@ module Aeson.Match.QQ.Internal.Value
   , TypeSig(..)
   , Type(..)
   , Nullable(..)
+  , embed
   ) where
 
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as Aeson (toHashMapText)
 import qualified Data.Aeson.Encoding.Internal as Aeson (encodingToLazyByteString)
 import           Data.CaseInsensitive (CI)
 import qualified Data.CaseInsensitive as CI
@@ -194,3 +197,18 @@ instance Aeson.ToJSON Nullable where
     Aeson.toJSON . \case
       Nullable -> True
       NonNullable -> False
+
+embed :: Aeson.Value -> Value ext
+embed = \case
+  Aeson.Null ->
+    Null
+  Aeson.Bool b ->
+    Bool b
+  Aeson.Number n ->
+    Number n
+  Aeson.String n ->
+    String n
+  Aeson.Array xs ->
+    Array Box {knownValues = fmap embed xs, extendable = False}
+  Aeson.Object (Aeson.toHashMapText -> o) ->
+    Object Box {knownValues = fmap embed o, extendable = False}
