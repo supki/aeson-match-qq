@@ -156,6 +156,21 @@ spec = do
     it "#13" $
       [qq| "Слава Україні" |] `shouldMatch` [aesonQQ| "Слава Україні" |]
 
+    -- https://github.com/supki/aeson-match-qq/issues/18
+    it "#18" $ do
+      -- string ~ string
+      match [qq| "foo" |] [aesonQQ| "bar" |] `shouldBe`
+        mismatch [] (String "foo") (Aeson.String "bar")
+      -- string !~ number
+      match [qq| "foo" |] [aesonQQ| 4 |] `shouldBe`
+        mistype [] (String "foo") (Aeson.Number 4)
+      -- string !~ null
+      match [qq| "foo" |] [aesonQQ| null |] `shouldBe`
+        mistype [] (String "foo") Aeson.Null
+      -- null !~ number
+      match [qq| null |] [aesonQQ| 4 |] `shouldBe`
+        mistype [] Null (Aeson.Number 4)
+
 newtype ToEncoding a = ToEncoding { unToEncoding :: a }
     deriving (Show, Eq, Num)
 
