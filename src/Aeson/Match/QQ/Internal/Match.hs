@@ -37,40 +37,41 @@ match =
  where
   go path matcher given = do
     let mismatched = mismatch (reverse path) matcher given
+        mistyped = mistype (reverse path) matcher given
     case (matcher, given) of
       (Any holeTypeO nameO, val) -> do
         for_ holeTypeO $ \holeType ->
           unless (holeTypeMatch holeType val)
-            mismatched
+            mistyped
         pure (maybe mempty (\name -> HashMap.singleton name val) nameO)
       (Null, Aeson.Null) ->
         pure mempty
       (Null, _) -> do
-        mismatched
+        mistyped
         pure mempty
       (Bool b, Aeson.Bool b') -> do
         unless (b == b') mismatched
         pure mempty
       (Bool _, _) -> do
-        mismatched
+        mistyped
         pure mempty
       (Number n, Aeson.Number n') -> do
         unless (n == n') mismatched
         pure mempty
       (Number _, _) -> do
-        mismatched
+        mistyped
         pure mempty
       (String str, Aeson.String str') -> do
         unless (str == str') mismatched
         pure mempty
       (String _, _) -> do
-        mismatched
+        mistyped
         pure mempty
       (StringCI str, Aeson.String str') -> do
         unless (str == CI.mk str') mismatched
         pure mempty
       (StringCI _, _) -> do
-        mismatched
+        mistyped
         pure mempty
       (Array Box {knownValues, extendable}, Aeson.Array arr) ->
         let
@@ -86,12 +87,12 @@ match =
             (\i v -> maybe (missingPathElem (reverse path) (Idx i)) (go (Idx i : path) v) (arr Vector.!? i))
             knownValues
       (Array _, _) -> do
-        mismatched
+        mistyped
         pure mempty
       (ArrayUO box, Aeson.Array arr) ->
         matchArrayUO mismatched path box arr
       (ArrayUO _, _) -> do
-        mismatched
+        mistyped
         pure mempty
       (Object Box {knownValues, extendable}, Aeson.Object o) ->
         let fold f =
@@ -106,7 +107,7 @@ match =
             (\k v -> maybe (missingPathElem (reverse path) (Key k)) (go (Key k : path) v) (HashMap.lookup k o))
             knownValues
       (Object _, _) -> do
-        mismatched
+        mistyped
         pure mempty
       (Ext val, val') -> do
         unless (val == val') mismatched
@@ -187,6 +188,10 @@ mismatch :: Path -> Value Aeson.Value -> Aeson.Value -> Validation (NonEmpty VE)
 mismatch path matcher given =
   throwE (Mismatch MkMismatch {..})
 
+mistype :: Path -> Value Aeson.Value -> Aeson.Value -> Validation (NonEmpty VE) a
+mistype path matcher given =
+  throwE (Mistype MkMismatch {..})
+
 missingPathElem :: Path -> PathElem -> Validation (NonEmpty VE) a
 missingPathElem path missing =
   throwE (MissingPathElem MkMissingPathElem {..})
@@ -205,6 +210,7 @@ throwE =
 
 data VE
   = Mismatch Mismatch
+  | Mistype Mismatch
   | MissingPathElem MissingPathElem
   | ExtraArrayValues ExtraArrayValues
   | ExtraObjectValues ExtraObjectValues
@@ -215,6 +221,10 @@ instance Aeson.ToJSON VE where
     Aeson.object . \case
       Mismatch v ->
         [ "type" .= ("mismatch" :: Text)
+        , "value" .= v
+        ]
+      Mistype v ->
+        [ "type" .= ("mistype" :: Text)
         , "value" .= v
         ]
       MissingPathElem v ->

@@ -12,6 +12,7 @@ module Aeson.Match.QQ
   , qq
   , match
   , mismatch
+  , mistype
   , missingPathElem
   , extraArrayValues
   , extraObjectValues
@@ -22,9 +23,26 @@ import qualified Data.Text.Encoding as Text
 import           Language.Haskell.TH.Quote (QuasiQuoter(..))
 import           Language.Haskell.TH.Syntax (Lift(..))
 
-import           Aeson.Match.QQ.Internal.Match (Path, PathElem(..), match, mismatch, missingPathElem, extraArrayValues, extraObjectValues)
+import           Aeson.Match.QQ.Internal.Match
+  ( Path
+  , PathElem(..)
+  , match
+  , mismatch
+  , mistype
+  , missingPathElem
+  , extraArrayValues
+  , extraObjectValues
+  )
 import           Aeson.Match.QQ.Internal.Parse (parse)
-import           Aeson.Match.QQ.Internal.Value (Value(..), Box(..), Array, Object, TypeSig(..), Type(..), Nullable(..))
+import           Aeson.Match.QQ.Internal.Value
+  ( Value(..)
+  , Box(..)
+  , Array
+  , Object
+  , TypeSig(..)
+  , Type(..)
+  , Nullable(..)
+  )
 
 
 qq :: QuasiQuoter
