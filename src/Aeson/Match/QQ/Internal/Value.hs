@@ -20,7 +20,6 @@ module Aeson.Match.QQ.Internal.Value
 
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as Aeson (toHashMapText)
 import qualified Data.Aeson.Encoding.Internal as Aeson (encodingToLazyByteString)
 import           Data.CaseInsensitive (CI)
 import qualified Data.CaseInsensitive as CI
@@ -210,5 +209,5 @@ embed = \case
     String n
   Aeson.Array xs ->
     Array Box {knownValues = fmap embed xs, extendable = False}
-  Aeson.Object (Aeson.toHashMapText -> o) ->
+  Aeson.Object o ->
     Object Box {knownValues = fmap embed o, extendable = False}
