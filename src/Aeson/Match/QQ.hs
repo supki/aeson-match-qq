@@ -1,5 +1,14 @@
 module Aeson.Match.QQ
-  ( Value(..)
+  ( match
+  , qq
+
+  , Error(..)
+  , Mismatch(..)
+  , MissingPathElem(..)
+  , ExtraArrayValues(..)
+  , ExtraObjectValues(..)
+
+  , Value(..)
   , Array
   , Object
   , Box(..)
@@ -8,14 +17,6 @@ module Aeson.Match.QQ
   , Nullable(..)
   , Path
   , PathElem(..)
-  , parse
-  , qq
-  , match
-  , mismatch
-  , mistype
-  , missingPathElem
-  , extraArrayValues
-  , extraObjectValues
   ) where
 
 import           Data.String (IsString(..))
@@ -24,14 +25,14 @@ import           Language.Haskell.TH.Quote (QuasiQuoter(..))
 import           Language.Haskell.TH.Syntax (Lift(..))
 
 import           Aeson.Match.QQ.Internal.Match
-  ( Path
+  ( match
+  , Error(..)
+  , Mismatch(..)
+  , MissingPathElem(..)
+  , ExtraArrayValues(..)
+  , ExtraObjectValues(..)
+  , Path
   , PathElem(..)
-  , match
-  , mismatch
-  , mistype
-  , missingPathElem
-  , extraArrayValues
-  , extraObjectValues
   )
 import           Aeson.Match.QQ.Internal.Parse (parse)
 import           Aeson.Match.QQ.Internal.Value

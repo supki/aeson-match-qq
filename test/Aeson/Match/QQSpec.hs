@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -6,6 +7,7 @@ module Aeson.Match.QQSpec (spec) where
 
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.QQ (aesonQQ)
+import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.HashMap.Strict as HashMap
 import           Test.Hspec
 
@@ -117,7 +119,11 @@ spec = do
 
     it "paths" $ do
       match [qq| {foo: {bar: {baz: [1, 4]}}} |] [aesonQQ| {foo: {bar: {baz: [1, 7]}}} |] `shouldBe`
-        mismatch ["foo", "bar", "baz", Idx 1] [qq| 4 |] [aesonQQ| 7 |]
+        throwE (Mismatch MkMismatch
+          { path = ["foo", "bar", "baz", Idx 1]
+          , matcher = [qq| 4 |]
+          , given = [aesonQQ| 7 |]
+          })
 
     it "named holes" $ do
       match [qq| {foo: _hole} |] [aesonQQ| {foo: {bar: {baz: [1, 4]}}} |] `shouldBe`
@@ -133,9 +139,15 @@ spec = do
     -- https://github.com/supki/aeson-match-qq/issues/7
     it "#7" $ do
       match [qq| {foo: _} |] [aesonQQ| {} |] `shouldBe`
-        missingPathElem [] "foo"
+        throwE (MissingPathElem MkMissingPathElem
+          { path = []
+          , missing = "foo"
+          })
       match [qq| [_] |] [aesonQQ| [] |] `shouldBe`
-        missingPathElem [] (Idx 0)
+        throwE (MissingPathElem MkMissingPathElem
+          { path = []
+          , missing = Idx 0
+          })
 
     -- https://github.com/supki/aeson-match-qq/issues/10
     it "#10" $ do
@@ -160,16 +172,32 @@ spec = do
     it "#18" $ do
       -- string ~ string
       match [qq| "foo" |] [aesonQQ| "bar" |] `shouldBe`
-        mismatch [] (String "foo") (Aeson.String "bar")
+        throwE (Mismatch MkMismatch
+          { path = []
+          , matcher = String "foo"
+          , given = Aeson.String "bar"
+          })
       -- string !~ number
       match [qq| "foo" |] [aesonQQ| 4 |] `shouldBe`
-        mistype [] (String "foo") (Aeson.Number 4)
+        throwE (Mistype MkMismatch
+          { path = []
+          , matcher = String "foo"
+          , given = Aeson.Number 4
+          })
       -- string !~ null
       match [qq| "foo" |] [aesonQQ| null |] `shouldBe`
-        mistype [] (String "foo") Aeson.Null
+        throwE (Mistype MkMismatch
+          { path = []
+          , matcher = String "foo"
+          , given = Aeson.Null
+          })
       -- null !~ number
       match [qq| null |] [aesonQQ| 4 |] `shouldBe`
-        mistype [] Null (Aeson.Number 4)
+        throwE (Mistype MkMismatch
+          { path = []
+          , matcher = Null
+          , given = Aeson.Number 4
+          })
 
 newtype ToEncoding a = ToEncoding { unToEncoding :: a }
     deriving (Show, Eq, Num)
@@ -187,3 +215,7 @@ shouldMatch a b =
 shouldNotMatch :: Value Aeson.Value -> Aeson.Value -> Expectation
 shouldNotMatch a b =
   match a b `shouldNotBe` pure mempty
+
+throwE :: e -> Either (NonEmpty e) a
+throwE =
+  Left . pure

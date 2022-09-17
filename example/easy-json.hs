@@ -8,7 +8,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 module Main (main) where
 
-import           Aeson.Match.QQ (match, qq)
+import           Aeson.Match.QQ (Value, match, qq)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.QQ (aesonQQ)
 import           Data.Either.Validation (Validation(..))
@@ -18,27 +18,28 @@ import qualified Data.HashMap.Strict as HashMap
 main :: IO ()
 main =
   case match matcher value of
-    Success matched
+    Right matched
       | Just (Aeson.String hobby) <- HashMap.lookup "firstHobbyName" matched ->
         print hobby
     _ ->
       error "sometimes, matchers fail"
- where
-  matcher =
-    [qq|
-      { "people":
-        (unordered)
-        [ { "name": "Drew"
-          , "hobbies":
-            [ { "name": _firstHobbyName }
-            , ...
-            ]
-          }
-        , ...
-        ]
+
+matcher :: Value Aeson.Value
+matcher =
+  [qq|
+    { "people":
+      (unordered)
+      [ { "name": "Drew"
+        , "hobbies":
+          [ { "name": _firstHobbyName }
+          , ...
+          ]
+        }
       , ...
-      }
-    |]
+      ]
+    , ...
+    }
+  |]
 
 value :: Aeson.Value
 value =

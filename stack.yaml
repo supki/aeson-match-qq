@@ -2,6 +2,5 @@ resolver: lts-18.28
 packages:
   - '.'
 extra-deps:
-  - 'aeson-2.0.1.0'
   - 'semialign-1.2'
 allow-newer: true

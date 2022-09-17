@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
@@ -5,16 +6,31 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
-module Aeson.Match.QQ.Internal.Match where
+module Aeson.Match.QQ.Internal.Match
+  ( match
+  , Error(..)
+  , Mismatch(..)
+  , MissingPathElem(..)
+  , ExtraArrayValues(..)
+  , ExtraObjectValues(..)
+  , Path
+  , PathElem(..)
+  ) where
 
 import           Control.Applicative (liftA2)
 import           Control.Monad (unless)
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
+#if MIN_VERSION_aeson(2,0,0)
 import qualified Data.Aeson.KeyMap as Aeson (toHashMapText)
+#endif
 import           Data.Bool (bool)
 import qualified Data.CaseInsensitive as CI
-import           Data.Either.Validation (Validation(..), eitherToValidation)
+import           Data.Either.Validation
+  ( Validation(..)
+  , eitherToValidation
+  , validationToEither
+  )
 import           Data.Foldable (for_, toList)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
@@ -37,12 +53,17 @@ import           Aeson.Match.QQ.Internal.Value
   )
 
 
+-- | Test if a matcher matches a 'Aeson.Value'.
 match
   :: Value Aeson.Value
+     -- ^ A 'qq`-created 'Value'
   -> Aeson.Value
-  -> Validation (NonEmpty VE) (HashMap Text Aeson.Value)
-match =
-  go []
+     -- ^ A 'Value' from aeson
+  -> Either (NonEmpty Error) (HashMap Text Aeson.Value)
+     -- ^ Either a non-empty list of errors, or a mapping
+     -- from _holes to their values.
+match matcher0 given0 =
+  validationToEither (go [] matcher0 given0)
  where
   go path matcher given = do
     let mismatched = mismatch (reverse path) matcher given
@@ -103,7 +124,14 @@ match =
       (ArrayUO _, _) -> do
         mistyped
         pure mempty
-      (Object Box {knownValues, extendable}, Aeson.Object (Aeson.toHashMapText -> o)) ->
+      ( Object Box {knownValues, extendable}
+#if MIN_VERSION_aeson(2,0,0)
+        , Aeson.Object (Aeson.toHashMapText -> o)
+#else
+        , Aeson.Object o
+#endif
+
+        ) ->
         let fold f =
               HashMap.foldrWithKey (\k v a -> liftA2 HashMap.union a (f k v)) (pure mempty)
             extraValues =
@@ -135,11 +163,11 @@ holeTypeMatch type_ val =
     (_, _) -> False
 
 matchArrayUO
-  :: Validation (NonEmpty VE) (HashMap Text Aeson.Value)
+  :: Validation (NonEmpty Error) (HashMap Text Aeson.Value)
   -> Path
   -> Box (Vector (Value Aeson.Value))
   -> Vector Aeson.Value
-  -> Validation (NonEmpty VE) (HashMap Text Aeson.Value)
+  -> Validation (NonEmpty Error) (HashMap Text Aeson.Value)
 matchArrayUO mismatched path Box {knownValues, extendable} xs = do
   -- Collect possible indices in `xs` for each position in `knownValues`.
   let indices = map (collectMatchingIndices (toList xs)) (toList knownValues)
@@ -169,10 +197,10 @@ matchArrayUO mismatched path Box {knownValues, extendable} xs = do
    where
     matchingIndex i x =
       case match knownValue x of
-        Success vs ->
-          Just (i, vs)
-        Failure _ ->
+        Left _ ->
           Nothing
+        Right vs ->
+          Just (i, vs)
   allIndicesAssignments = map (map unI) . cleanUp . go Set.empty
    where
     go _ [] = [[]]
@@ -192,23 +220,23 @@ instance Ord I where
   I (a, _) `compare` I (b, _) =
     a `compare` b
 
-mismatch :: Path -> Value Aeson.Value -> Aeson.Value -> Validation (NonEmpty VE) a
+mismatch :: Path -> Value Aeson.Value -> Aeson.Value -> Validation (NonEmpty Error) a
 mismatch path matcher given =
   throwE (Mismatch MkMismatch {..})
 
-mistype :: Path -> Value Aeson.Value -> Aeson.Value -> Validation (NonEmpty VE) a
+mistype :: Path -> Value Aeson.Value -> Aeson.Value -> Validation (NonEmpty Error) a
 mistype path matcher given =
   throwE (Mistype MkMismatch {..})
 
-missingPathElem :: Path -> PathElem -> Validation (NonEmpty VE) a
+missingPathElem :: Path -> PathElem -> Validation (NonEmpty Error) a
 missingPathElem path missing =
   throwE (MissingPathElem MkMissingPathElem {..})
 
-extraArrayValues :: Path -> Vector Aeson.Value -> Validation (NonEmpty VE) a
+extraArrayValues :: Path -> Vector Aeson.Value -> Validation (NonEmpty Error) a
 extraArrayValues path values =
   throwE (ExtraArrayValues MkExtraArrayValues {..})
 
-extraObjectValues :: Path -> HashMap Text Aeson.Value -> Validation (NonEmpty VE) a
+extraObjectValues :: Path -> HashMap Text Aeson.Value -> Validation (NonEmpty Error) a
 extraObjectValues path values =
   throwE (ExtraObjectValues MkExtraObjectValues {..})
 
@@ -216,7 +244,7 @@ throwE :: e -> Validation (NonEmpty e) a
 throwE =
   eitherToValidation . Left . pure
 
-data VE
+data Error
   = Mismatch Mismatch
   | Mistype Mismatch
   | MissingPathElem MissingPathElem
@@ -224,7 +252,7 @@ data VE
   | ExtraObjectValues ExtraObjectValues
     deriving (Show, Eq)
 
-instance Aeson.ToJSON VE where
+instance Aeson.ToJSON Error where
   toJSON =
     Aeson.object . \case
       Mismatch v ->

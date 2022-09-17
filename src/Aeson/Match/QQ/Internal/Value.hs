@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -20,7 +21,9 @@ module Aeson.Match.QQ.Internal.Value
 
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
+#if MIN_VERSION_aeson(2,0,0)
 import qualified Data.Aeson.KeyMap as Aeson (toHashMapText)
+#endif
 import qualified Data.Aeson.Encoding.Internal as Aeson (encodingToLazyByteString)
 import           Data.CaseInsensitive (CI)
 import qualified Data.CaseInsensitive as CI
@@ -212,5 +215,9 @@ embed = \case
     String n
   Aeson.Array xs ->
     Array Box {knownValues = fmap embed xs, extendable = False}
+#if MIN_VERSION_aeson(2,0,0)
   Aeson.Object (Aeson.toHashMapText -> o) ->
+#else
+  Aeson.Object o ->
+#endif
     Object Box {knownValues = fmap embed o, extendable = False}
