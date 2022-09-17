@@ -36,7 +36,14 @@ import qualified Data.Text as Text
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
 import           Language.Haskell.TH (Exp(..), Lit(..))
-import           Language.Haskell.TH.Syntax (Lift(..), unsafeTExpCoerce)
+import           Language.Haskell.TH.Syntax
+  ( Lift(..)
+#if MIN_VERSION_template_haskell(2,17,0)
+  , unsafeCodeCoerce
+#else
+  , unsafeTExpCoerce
+#endif
+  )
 import           Prelude hiding (any, null)
 
 
@@ -152,12 +159,16 @@ instance ext ~ Exp => Lift (Value ext) where
           } :: Value Aeson.Value
       |]
     Ext ext ->
-      [| Ext (let Just val = Aeson.decode (Aeson.encodingToLazyByteString (Aeson.toEncoding $(pure ext))) in val) :: Value Aeson.Value |]
+      [| Ext (let ~(Just val) = Aeson.decode (Aeson.encodingToLazyByteString (Aeson.toEncoding $(pure ext))) in val) :: Value Aeson.Value |]
    where
     textL =
       StringL . Text.unpack
   liftTyped =
+#if MIN_VERSION_template_haskell(2,17,0)
+    unsafeCodeCoerce . lift
+#else
     unsafeTExpCoerce . lift
+#endif
 
 data TypeSig = TypeSig
   { type_    :: Type

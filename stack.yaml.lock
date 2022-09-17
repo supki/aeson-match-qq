@@ -6,14 +6,14 @@
 packages:
 - completed:
     pantry-tree:
-      sha256: 2a3ecc941fdf106385744f78ceae80fa0e7e8adb28042b2a9aaa468687ef9099
+      sha256: 5d5420cd362beee642537472026ba42cf7f9c75e423b9ecc4a1b3482e247375b
       size: 537
-    hackage: semialign-1.2@sha256:d3e7e3a5fe509f30bf2121d94c54b586217f2dc69a47ffede3633ddbc12cba68,2743
+    hackage: semialign-1.2.0.1@sha256:ee3468e349e72ec0a604ae05573a4de7181d97d10366254244a0cca8a76d6c35,2852
   original:
-    hackage: semialign-1.2
+    hackage: semialign-1.2.0.1
 snapshots:
 - completed:
-    sha256: 428ec8d5ce932190d3cbe266b9eb3c175cd81e984babf876b64019e2cbe4ea68
-    size: 590100
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/28.yaml
-  original: lts-18.28
+    sha256: 2b54dab52718c316413ffda74058ceee837946be8bdf321e3bc99aee8abfb64c
+    size: 636695
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2022/9/17.yaml
+  original: nightly-2022-09-17

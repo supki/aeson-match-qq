@@ -1,7 +1,15 @@
+1.5.1
+=====
+
+  * GHC 9.2 compatibility
+
 1.5.0
 =====
 
   * Streamlined API.
+
+  * Sprinkled some CPP to support clients that have been made compatible
+    with Aeson 2.0 yet, so that they do not have to use a separate release (1.3.x)
 
 1.4.3
 =====
