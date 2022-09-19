@@ -1,17 +1,24 @@
 #!/usr/bin/env stack
--- stack --resolver lts-18.28 runghc
+{- stack
+    --resolver lts-18.28
+    script
+    --package aeson
+    --package aeson-qq
+    --package unordered-containers
+    --package aeson-match-qq
+-}
 --
 -- This example shows how to extract some data from a nested JSON value.
 --
 -- Inspired by https://blog.drewolson.org/easy-json
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# OPTIONS_GHC -Wall #-}
 module Main (main) where
 
 import           Aeson.Match.QQ (Value, match, qq)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.QQ (aesonQQ)
-import           Data.Either.Validation (Validation(..))
 import qualified Data.HashMap.Strict as HashMap
 
 
