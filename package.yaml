@@ -1,5 +1,5 @@
 name: aeson-match-qq
-version: 1.5.1
+version: 1.5.2
 synopsis: Declarative JSON matchers.
 description: See README.markdown
 category: Web
@@ -23,6 +23,7 @@ library:
     - containers
     - either
     - haskell-src-meta
+    - pretty
     - scientific
     - template-haskell
     - text

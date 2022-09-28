@@ -15,14 +15,18 @@ module Aeson.Match.QQ
   , TypeSig(..)
   , Type(..)
   , Nullable(..)
-  , Path
+  , Path(..)
   , PathElem(..)
+
+  , prettyError
   ) where
 
 import           Data.String (IsString(..))
 import qualified Data.Text.Encoding as Text
 import           Language.Haskell.TH.Quote (QuasiQuoter(..))
 import           Language.Haskell.TH.Syntax (Lift(..))
+import qualified Text.PrettyPrint as PP (render)
+import qualified Text.PrettyPrint.HughesPJClass as PP (Pretty(..))
 
 import           Aeson.Match.QQ.Internal.Match
   ( match
@@ -31,7 +35,7 @@ import           Aeson.Match.QQ.Internal.Match
   , MissingPathElem(..)
   , ExtraArrayValues(..)
   , ExtraObjectValues(..)
-  , Path
+  , Path(..)
   , PathElem(..)
   )
 import           Aeson.Match.QQ.Internal.Parse (parse)
@@ -46,6 +50,7 @@ import           Aeson.Match.QQ.Internal.Value
   )
 
 
+-- | Construct a matcher 'Value'.
 qq :: QuasiQuoter
 qq = QuasiQuoter
   { quoteExp = \str ->
@@ -61,3 +66,8 @@ qq = QuasiQuoter
   , quoteDec =
       \_ -> error "Aeson.Match.QQ.qq: no quoteDec"
   }
+
+-- | Pretty print an 'Error'.
+prettyError :: Error -> String
+prettyError =
+  PP.render . PP.pPrint

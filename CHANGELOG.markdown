@@ -1,3 +1,8 @@
+1.5.2
+=====
+
+  * Add `prettyError`, a pretty printer for `Error`s (https://github.com/supki/aeson-match-qq/pull/23)
+
 1.5.1
 =====
 

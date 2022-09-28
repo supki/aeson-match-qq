@@ -199,6 +199,51 @@ spec = do
           , given = Aeson.Number 4
           })
 
+    it "pretty" $ do
+      prettyError (Mismatch MkMismatch
+        { path = [Key "foo", Idx 0, Key "bar"]
+        , matcher = String "foo"
+        , given = Aeson.String "bar"
+        }) `shouldBe`
+          "  error: value does not match\n\
+          \   path: .foo[0].bar\n\
+          \matcher: {\"value\":\"foo\",\"type\":\"string\"}\n\
+          \  given: \"bar\""
+      prettyError (Mistype MkMismatch
+        { path = [Key "foo", Idx 0, Key "bar"]
+        , matcher = String "foo"
+        , given = Aeson.Number 4
+        }) `shouldBe`
+          "  error: type of value does not match\n\
+          \   path: .foo[0].bar\n\
+          \matcher: {\"value\":\"foo\",\"type\":\"string\"}\n\
+          \  given: 4"
+      prettyError (MissingPathElem MkMissingPathElem
+        { path = [Key "foo", Idx 0, Key "bar"]
+        , missing = Idx 1
+        }) `shouldBe`
+          "  error: missing key or index\n\
+          \   path: .foo[0].bar\n\
+          \missing: [1]"
+      prettyError (ExtraArrayValues MkExtraArrayValues
+        { path = [Key "foo", Idx 0, Key "bar"]
+        , values = [Aeson.String "foo", Aeson.Number 4]
+        }) `shouldBe`
+          "  error: extra array values\n\
+          \   path: .foo[0].bar\n\
+          \ values: \"foo\"\n\
+          \         4"
+      prettyError (ExtraObjectValues MkExtraObjectValues
+        { path = [Key "foo", Idx 0, Key "bar"]
+        , values = HashMap.fromList [("k0", Aeson.String "foo"), ("k1", Aeson.Number 4)]
+        }) `shouldBe`
+          "  error: extra object values\n\
+          \   path: .foo[0].bar\n\
+          \ values:   key: .k0\n\
+          \         value: \"foo\"\n\
+          \           key: .k1\n\
+          \         value: 4"
+
 newtype ToEncoding a = ToEncoding { unToEncoding :: a }
     deriving (Show, Eq, Num)
 
