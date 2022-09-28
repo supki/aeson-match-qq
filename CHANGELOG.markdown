@@ -1,7 +1,7 @@
 1.5.2
 =====
 
-  * Add `prettyError`, a pretty printer for `Error`s (https://github.com/supki/aeson-match-qq/pull/23)
+  * Add `prettyError`, a pretty printer for `Error`s (https://github.com/supki/aeson-match-qq/pull/24)
 
 1.5.1
 =====
@@ -13,7 +13,7 @@
 
   * Streamlined API.
 
-  * Sprinkled some CPP to support clients that have been made compatible
+  * Sprinkled some CPP to support clients that have not been made compatible
     with Aeson 2.0 yet, so that they do not have to use a separate release (1.3.x)
 
 1.4.3
