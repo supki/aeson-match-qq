@@ -1,3 +1,8 @@
+1.5.3
+=====
+
+  * Minuscule Haddock improvements
+
 1.5.2
 =====
 

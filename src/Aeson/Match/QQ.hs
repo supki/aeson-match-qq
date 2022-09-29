@@ -7,6 +7,7 @@ module Aeson.Match.QQ
   , MissingPathElem(..)
   , ExtraArrayValues(..)
   , ExtraObjectValues(..)
+  , prettyError
 
   , Value(..)
   , Array
@@ -17,8 +18,6 @@ module Aeson.Match.QQ
   , Nullable(..)
   , Path(..)
   , PathElem(..)
-
-  , prettyError
   ) where
 
 import           Data.String (IsString(..))

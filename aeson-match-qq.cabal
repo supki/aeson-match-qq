@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           aeson-match-qq
-version:        1.5.2
+version:        1.5.3
 synopsis:       Declarative JSON matchers.
 description:    See README.markdown
 category:       Web

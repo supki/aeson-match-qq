@@ -72,7 +72,7 @@ import           Aeson.Match.QQ.Internal.Value
 -- | Test if a matcher matches a 'Aeson.Value'.
 match
   :: Value Aeson.Value
-     -- ^ A matcher
+     -- ^ A matcher, constructed with 'qq'
   -> Aeson.Value
      -- ^ A 'Value' from aeson
   -> Either (NonEmpty Error) (HashMap Text Aeson.Value)
@@ -277,12 +277,18 @@ throwE :: e -> Validation (NonEmpty e) a
 throwE =
   eitherToValidation . Left . pure
 
+-- | Various errors that can happen when a matcher tries to match a 'Aeson.Value'.
 data Error
   = Mismatch Mismatch
+    -- ^ The type of the value is correct, but the value itself is wrong
   | Mistype Mismatch
+    -- ^ The type of the value is wrong
   | MissingPathElem MissingPathElem
+    -- ^ The request path is missing in the value
   | ExtraArrayValues ExtraArrayValues
+    -- ^ Unexpected extra values in an array
   | ExtraObjectValues ExtraObjectValues
+    -- ^ Unexpected extra key-value pairs in an object
     deriving (Show, Eq)
 
 instance PP.Pretty Error where
@@ -337,6 +343,8 @@ instance Aeson.ToJSON Error where
         , "value" .= v
         ]
 
+-- | A generic error that covers cases where either the type of the value
+-- is wrong, or the value itself does not match.
 data Mismatch = MkMismatch
   { path    :: Path
   , matcher :: Value Aeson.Value
@@ -359,6 +367,8 @@ instance PP.Pretty Mismatch where
       , PP.hsep ["  given:", ppJson given]
       ]
 
+-- | This error covers the case where the requested path simply does not exist
+-- in a 'Aeson.Value'.
 data MissingPathElem = MkMissingPathElem
   { path    :: Path
   , missing :: PathElem
@@ -378,6 +388,8 @@ instance PP.Pretty MissingPathElem where
       , PP.hsep ["missing:", PP.pPrint missing]
       ]
 
+-- | Unless an extendable matcher is used, any extra values in an array
+-- missing in the matcher will trigger this error.
 data ExtraArrayValues = MkExtraArrayValues
   { path   :: Path
   , values :: Vector Aeson.Value
@@ -400,6 +412,8 @@ instance PP.Pretty ExtraArrayValues where
           ]
       ]
 
+-- | Unless an extendable matcher is used, any extra key-value pairs in
+-- an object missing in the matcher will trigger this error.
 data ExtraObjectValues = MkExtraObjectValues
   { path   :: Path
   , values :: HashMap Text Aeson.Value
@@ -428,6 +442,7 @@ instance PP.Pretty ExtraObjectValues where
         , PP.hsep ["value:", ppJson v]
         ]
 
+-- | A path is a list of path elements.
 newtype Path = Path { unPath :: [PathElem] }
     deriving (Show, Eq, IsList, Aeson.ToJSON)
 
@@ -435,6 +450,7 @@ instance PP.Pretty Path where
   pPrint =
     foldMap PP.pPrint . unPath
 
+-- | A path element is either a key lookup in an object, or an index lookup in an array.
 data PathElem
   = Key Text
   | Idx Int
