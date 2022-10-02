@@ -9,13 +9,12 @@ module Aeson.Match.QQ
   , ExtraObjectValues(..)
   , prettyError
 
-  , Value(..)
+  , Matcher(..)
   , Array
   , Object
   , Box(..)
-  , TypeSig(..)
+  , HoleSig(..)
   , Type(..)
-  , Nullable(..)
   , Path(..)
   , PathElem(..)
   ) where
@@ -39,17 +38,16 @@ import           Aeson.Match.QQ.Internal.Match
   )
 import           Aeson.Match.QQ.Internal.Parse (parse)
 import           Aeson.Match.QQ.Internal.Value
-  ( Value(..)
+  ( Matcher(..)
   , Box(..)
   , Array
   , Object
-  , TypeSig(..)
+  , HoleSig(..)
   , Type(..)
-  , Nullable(..)
   )
 
 
--- | Construct a matcher 'Value'.
+-- | Construct a 'Matcher'.
 qq :: QuasiQuoter
 qq = QuasiQuoter
   { quoteExp = \str ->

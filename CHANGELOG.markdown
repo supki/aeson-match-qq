@@ -1,3 +1,8 @@
+1.6.0
+=====
+
+  * Clarified ans simplified API some more.
+
 1.5.3
 =====
 

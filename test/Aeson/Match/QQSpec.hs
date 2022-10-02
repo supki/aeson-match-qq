@@ -18,11 +18,11 @@ spec :: Spec
 spec = do
   describe "parse" $
     it "specs" $ do
-      [qq| _ |] `shouldBe` Any Nothing Nothing
-      [qq| _hole |] `shouldBe` Any Nothing (pure "hole")
-      [qq| _"fancy hole" |] `shouldBe` Any Nothing (pure "fancy hole")
-      [qq| _typed-hole : number |] `shouldBe` Any (pure (TypeSig NumberT NonNullable)) (pure "typed-hole")
-      [qq| _typed-nullable-hole : number? |] `shouldBe` Any (pure (TypeSig NumberT Nullable)) (pure "typed-nullable-hole")
+      [qq| _ |] `shouldBe` Hole Nothing Nothing
+      [qq| _hole |] `shouldBe` Hole Nothing (pure "hole")
+      [qq| _"fancy hole" |] `shouldBe` Hole Nothing (pure "fancy hole")
+      [qq| _typed-hole : number |] `shouldBe` Hole (pure (HoleSig NumberT False)) (pure "typed-hole")
+      [qq| _typed-nullable-hole : number? |] `shouldBe` Hole (pure (HoleSig NumberT True)) (pure "typed-nullable-hole")
 
       [qq| null |] `shouldBe` Null
 
@@ -35,36 +35,36 @@ spec = do
       [qq| "foo" |] `shouldBe` String "foo"
 
       [qq| [] |] `shouldBe`
-        Array Box {knownValues = [], extendable = False}
+        Array Box {values = [], extra = False}
       [qq| [1, 2, 3] |] `shouldBe`
-        Array Box {knownValues = [Number 1, Number 2, Number 3], extendable = False}
+        Array Box {values = [Number 1, Number 2, Number 3], extra = False}
       [qq| [1, _, 3] |] `shouldBe`
-        Array Box {knownValues = [Number 1, Any Nothing Nothing, Number 3], extendable = False}
+        Array Box {values = [Number 1, Hole Nothing Nothing, Number 3], extra = False}
       [qq| [1, _, 3, ...] |] `shouldBe`
-        Array Box {knownValues = [Number 1, Any Nothing Nothing, Number 3], extendable = True}
+        Array Box {values = [Number 1, Hole Nothing Nothing, Number 3], extra = True}
 
       [qq| (unordered) [] |] `shouldBe`
-        ArrayUO Box {knownValues = [], extendable = False}
+        ArrayUO Box {values = [], extra = False}
       [qq| (unordered) [1, 2, 3] |] `shouldBe`
-        ArrayUO Box {knownValues = [Number 1, Number 2, Number 3], extendable = False}
+        ArrayUO Box {values = [Number 1, Number 2, Number 3], extra = False}
       [qq| (unordered) [1, _, 3] |] `shouldBe`
-        ArrayUO Box {knownValues = [Number 1, Any Nothing Nothing, Number 3], extendable = False}
+        ArrayUO Box {values = [Number 1, Hole Nothing Nothing, Number 3], extra = False}
       [qq| (unordered) [1, _, 3, ...] |] `shouldBe`
-        ArrayUO Box {knownValues = [Number 1, Any Nothing Nothing, Number 3], extendable = True}
+        ArrayUO Box {values = [Number 1, Hole Nothing Nothing, Number 3], extra = True}
 
       [qq| {} |] `shouldBe`
-        Object Box {knownValues = [], extendable = False}
+        Object Box {values = [], extra = False}
       [qq| {foo: 4} |] `shouldBe`
-        Object Box {knownValues = [("foo", Number 4)], extendable = False}
+        Object Box {values = [("foo", Number 4)], extra = False}
       [qq| {foo: 4, "bar": 7} |] `shouldBe`
-        Object Box {knownValues = [("foo", Number 4), ("bar", Number 7)], extendable = False}
+        Object Box {values = [("foo", Number 4), ("bar", Number 7)], extra = False}
       [qq| {foo: 4, "bar": 7, ...} |] `shouldBe`
-        Object Box {knownValues = [("foo", Number 4), ("bar", Number 7)], extendable = True}
+        Object Box {values = [("foo", Number 4), ("bar", Number 7)], extra = True}
 
       [qq| {foo: #{4 + 7 :: Int}} |] `shouldBe`
-        Object Box {knownValues = [("foo", Ext (Aeson.Number 11))], extendable = False}
+        Object Box {values = [("foo", Ext (Aeson.Number 11))], extra = False}
       [qq| {foo: #{4 + 7 :: ToEncoding Int}} |] `shouldBe`
-        Object Box {knownValues = [("foo", Ext (Aeson.Number 11))], extendable = False}
+        Object Box {values = [("foo", Ext (Aeson.Number 11))], extra = False}
 
   describe "match" $ do
     it "specs" $ do
@@ -154,14 +154,14 @@ spec = do
       [qq| {foo: []} |] `shouldBe`
         Object
           (Box
-            { knownValues = [("foo", Array (Box {knownValues = [], extendable = False}))]
-            , extendable = False
+            { values = [("foo", Array (Box {values = [], extra = False}))]
+            , extra = False
             })
       [qq| [{}] |] `shouldBe`
         Array
           (Box
-            { knownValues = [Object (Box {knownValues = [], extendable = False})]
-            , extendable = False
+            { values = [Object (Box {values = [], extra = False})]
+            , extra = False
             })
 
     -- https://github.com/supki/aeson-match-qq/issues/13
@@ -253,11 +253,11 @@ instance Aeson.ToJSON a => Aeson.ToJSON (ToEncoding a) where
   toEncoding =
     Aeson.toEncoding . unToEncoding
 
-shouldMatch :: Value Aeson.Value -> Aeson.Value -> Expectation
+shouldMatch :: HasCallStack => Matcher Aeson.Value -> Aeson.Value -> Expectation
 shouldMatch a b =
   match a b `shouldBe` pure mempty
 
-shouldNotMatch :: Value Aeson.Value -> Aeson.Value -> Expectation
+shouldNotMatch :: HasCallStack => Matcher Aeson.Value -> Aeson.Value -> Expectation
 shouldNotMatch a b =
   match a b `shouldNotBe` pure mempty
 

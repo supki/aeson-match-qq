@@ -10,7 +10,6 @@ import qualified Data.Aeson.Parser as Aeson
 import qualified Data.Attoparsec.ByteString as Atto
 import qualified Data.ByteString as ByteString
 -- cannot use .Text here due to .Aeson parsers being tied to .ByteString
-import           Data.Bool (bool)
 import           Data.ByteString (ByteString)
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Char as Char
@@ -26,19 +25,24 @@ import           Language.Haskell.Meta.Parse (parseExp)
 import           Language.Haskell.TH (Exp(..))
 import           Prelude hiding (any, null)
 
-import           Aeson.Match.QQ.Internal.Value (Value(..), Box(..), TypeSig(..), Type(..), Nullable(..))
+import           Aeson.Match.QQ.Internal.Value
+  ( Matcher(..)
+  , Box(..)
+  , HoleSig(..)
+  , Type(..)
+  )
 
 
-parse :: ByteString -> Either String (Value Exp)
+parse :: ByteString -> Either String (Matcher Exp)
 parse =
   Atto.parseOnly value
 
-value :: Atto.Parser (Value Exp)
+value :: Atto.Parser (Matcher Exp)
 value = do
   spaces
   b <- Atto.peekWord8'
   case b of
-    AnyP ->
+    HoleP ->
       any
     NP ->
       null
@@ -64,41 +68,41 @@ value = do
   startOfNumber b =
     b >= ZeroP && b <= NineP || b == MinusP
 
-any :: Atto.Parser (Value Exp)
+any :: Atto.Parser (Matcher Exp)
 any = do
-  _ <- Atto.word8 AnyP
+  _ <- Atto.word8 HoleP
   name <- fmap Just key <|> pure Nothing
   spaces
-  expectedType <- optional typeSig
-  pure (Any expectedType name)
+  expectedType <- optional holeSig
+  pure (Hole expectedType name)
 
-null :: Atto.Parser (Value Exp)
+null :: Atto.Parser (Matcher Exp)
 null =
   Null <$ Atto.string "null"
 
-false :: Atto.Parser (Value Exp)
+false :: Atto.Parser (Matcher Exp)
 false =
   Bool False <$ Atto.string "false"
 
-true :: Atto.Parser (Value Exp)
+true :: Atto.Parser (Matcher Exp)
 true =
   Bool True <$ Atto.string "true"
 
-number :: Atto.Parser (Value Exp)
+number :: Atto.Parser (Matcher Exp)
 number =
   fmap Number Aeson.scientific
 
-string :: Atto.Parser (Value Exp)
+string :: Atto.Parser (Matcher Exp)
 string =
   fmap String Aeson.jstring
 
-stringCI :: Atto.Parser (Value Exp)
+stringCI :: Atto.Parser (Matcher Exp)
 stringCI = do
   _ <- Atto.string "(ci)"
   spaces
   fmap (StringCI . CI.mk) Aeson.jstring
 
-array :: Atto.Parser (Value Exp)
+array :: Atto.Parser (Matcher Exp)
 array = do
   _ <- Atto.word8 OpenSquareBracketP
   spaces
@@ -106,11 +110,11 @@ array = do
   case b of
     CloseSquareBracketP -> do
       _ <- Atto.word8 CloseSquareBracketP
-      pure (Array Box {knownValues = Vector.empty, extendable = False})
+      pure (Array Box {values = Vector.empty, extra = False})
     _ -> do
       loop [] 0
  where
-  loop values !n = do
+  loop acc !n = do
     val <- value
     spaces
     b <- Atto.satisfy (\w -> w == CommaP || w == CloseSquareBracketP) Atto.<?> "',' or ']'"
@@ -124,27 +128,27 @@ array = do
             spaces
             _ <- Atto.word8 CloseSquareBracketP
             pure $ Array Box
-              { knownValues = Vector.fromListN (n + 1) (reverse (val : values))
-              , extendable = True
+              { values = Vector.fromListN (n + 1) (reverse (val : acc))
+              , extra = True
               }
           _ ->
-            loop (val : values) (n + 1)
+            loop (val : acc) (n + 1)
       CloseSquareBracketP ->
         pure $ Array Box
-          { knownValues = Vector.fromListN (n + 1) (reverse (val : values))
-          , extendable = False
+          { values = Vector.fromListN (n + 1) (reverse (val : acc))
+          , extra = False
           }
       _ ->
         error "impossible"
 
-arrayUO :: Atto.Parser (Value Exp)
+arrayUO :: Atto.Parser (Matcher Exp)
 arrayUO = do
   _ <- Atto.string "(unordered)"
   spaces
   Array box <- array
   pure (ArrayUO box)
 
-object :: Atto.Parser (Value Exp)
+object :: Atto.Parser (Matcher Exp)
 object = do
   _ <- Atto.word8 OpenCurlyBracketP
   spaces
@@ -152,11 +156,11 @@ object = do
   case b of
     CloseCurlyBracketP -> do
       _ <- Atto.word8 CloseCurlyBracketP
-      pure (Object Box {knownValues = HashMap.empty, extendable = False})
+      pure (Object Box {values = HashMap.empty, extra = False})
     _ ->
       loop []
  where
-  loop values = do
+  loop acc = do
     k <- key
     spaces
     _ <- Atto.word8 ColonP
@@ -174,15 +178,15 @@ object = do
             spaces
             _ <- Atto.word8 CloseCurlyBracketP
             pure $ Object Box
-              { knownValues = HashMap.fromList ((k, val) : values)
-              , extendable = True
+              { values = HashMap.fromList ((k, val) : acc)
+              , extra = True
               }
           _ ->
-            loop ((k, val) : values)
+            loop ((k, val) : acc)
       CloseCurlyBracketP ->
         pure $ Object Box
-          { knownValues = HashMap.fromList ((k, val) : values)
-          , extendable = False
+          { values = HashMap.fromList ((k, val) : acc)
+          , extra = False
           }
       _ ->
         error "impossible"
@@ -196,7 +200,7 @@ rest :: Atto.Parser ()
 rest =
   () <$ Atto.string "..."
 
-haskellExp :: Atto.Parser (Value Exp)
+haskellExp :: Atto.Parser (Matcher Exp)
 haskellExp =
   fmap Ext (Atto.string "#{" *> go)
  where
@@ -204,8 +208,8 @@ haskellExp =
     str <- Atto.takeWhile1 (/= CloseCurlyBracketP) <* Atto.word8 CloseCurlyBracketP
     either fail pure (parseExp (Text.unpack (Text.decodeUtf8 str)))
 
-typeSig :: Atto.Parser TypeSig
-typeSig = do
+holeSig :: Atto.Parser HoleSig
+holeSig = do
   _ <- Atto.word8 ColonP
   spaces
   asum
@@ -221,7 +225,7 @@ typeSig = do
   p name typeName = do
     _ <- Atto.string name
     q <- optional (Atto.word8 QuestionMarkP)
-    pure (TypeSig typeName (bool NonNullable Nullable (isJust q)))
+    pure (HoleSig typeName (isJust q))
 
 -- This function has been stolen from aeson.
 -- ref: https://hackage.haskell.org/package/aeson-1.4.6.0/docs/src/Data.Aeson.Parser.Internal.html#skipSpace
@@ -230,8 +234,8 @@ spaces =
   Atto.skipWhile (\b -> b == SpaceP || b == NewLineP || b == CRP || b == TabP)
 {-# INLINE spaces #-}
 
-pattern AnyP, NP, FP, TP, DoubleQuoteP, DotP, CommaP, HashP :: Word8
-pattern AnyP = 95 -- '_'
+pattern HoleP, NP, FP, TP, DoubleQuoteP, DotP, CommaP, HashP :: Word8
+pattern HoleP = 95 -- '_'
 pattern NP = 110 -- 'n'
 pattern FP = 102 -- 'f'
 pattern TP = 116 -- 't'

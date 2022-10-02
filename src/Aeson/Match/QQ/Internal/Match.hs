@@ -60,24 +60,21 @@ import qualified Text.PrettyPrint as PP
 import qualified Text.PrettyPrint.HughesPJClass as PP (Pretty(..))
 
 import           Aeson.Match.QQ.Internal.Value
-  ( Value(..)
+  ( Matcher(..)
   , Box(..)
-  , TypeSig(..)
+  , HoleSig(..)
   , Type(..)
-  , Nullable(..)
   , embed
   )
 
 
--- | Test if a matcher matches a 'Aeson.Value'.
+-- | Test if a 'Matcher' matches a 'Aeson.Value'.
 match
-  :: Value Aeson.Value
-     -- ^ A matcher, constructed with 'qq'
+  :: Matcher Aeson.Value
   -> Aeson.Value
-     -- ^ A 'Value' from aeson
   -> Either (NonEmpty Error) (HashMap Text Aeson.Value)
      -- ^ Either a non-empty list of errors, or a mapping
-     -- from _holes to their values.
+     -- from named _holes to their values.
 match matcher0 given0 =
   validationToEither (go [] matcher0 given0)
  where
@@ -85,7 +82,7 @@ match matcher0 given0 =
     let mismatched = mismatch path matcher given
         mistyped = mistype path matcher given
     case (matcher, given) of
-      (Any holeTypeO nameO, val) -> do
+      (Hole holeTypeO nameO, val) -> do
         for_ holeTypeO $ \holeType ->
           unless (holeTypeMatch holeType val)
             mistyped
@@ -119,19 +116,19 @@ match matcher0 given0 =
       (StringCI _, _) -> do
         mistyped
         pure mempty
-      (Array Box {knownValues, extendable}, Aeson.Array arr) ->
+      (Array Box {values, extra}, Aeson.Array arr) ->
         let
           fold f =
             Vector.ifoldr (\i v a -> liftA2 HashMap.union a (f i v)) (pure mempty)
           extraValues =
-            Vector.drop (Vector.length knownValues) arr
+            Vector.drop (Vector.length values) arr
         in
           unless
-            (extendable || Vector.null extraValues)
+            (extra || Vector.null extraValues)
             (extraArrayValues path extraValues) *>
           fold
             (\i v -> maybe (missingPathElem path (Idx i)) (go (Idx i : path) v) (arr Vector.!? i))
-            knownValues
+            values
       (Array _, _) -> do
         mistyped
         pure mempty
@@ -140,7 +137,7 @@ match matcher0 given0 =
       (ArrayUO _, _) -> do
         mistyped
         pure mempty
-      ( Object Box {knownValues, extendable}
+      ( Object Box {values, extra}
 #if MIN_VERSION_aeson(2,0,0)
         , Aeson.Object (Aeson.toHashMapText -> o)
 #else
@@ -151,57 +148,57 @@ match matcher0 given0 =
         let fold f =
               HashMap.foldrWithKey (\k v a -> liftA2 HashMap.union a (f k v)) (pure mempty)
             extraValues =
-              HashMap.difference o knownValues
+              HashMap.difference o values
         in
           unless
-            (extendable || HashMap.null extraValues)
+            (extra || HashMap.null extraValues)
             (extraObjectValues path extraValues) *>
           fold
             (\k v -> maybe (missingPathElem path (Key k)) (go (Key k : path) v) (HashMap.lookup k o))
-            knownValues
+            values
       (Object _, _) -> do
         mistyped
         pure mempty
       (Ext val, val') ->
         go path (embed val) val'
 
-holeTypeMatch :: TypeSig -> Aeson.Value -> Bool
+holeTypeMatch :: HoleSig -> Aeson.Value -> Bool
 holeTypeMatch type_ val =
   case (type_, val) of
-    (TypeSig {nullable = Nullable}, Aeson.Null) -> True
-    (TypeSig {type_ = BoolT} , Aeson.Bool {}) -> True
-    (TypeSig {type_ = NumberT} , Aeson.Number {}) -> True
-    (TypeSig {type_ = StringT} , Aeson.String {}) -> True
-    (TypeSig {type_ = StringCIT} , Aeson.String {}) -> True
-    (TypeSig {type_ = ArrayT} , Aeson.Array {}) -> True
-    (TypeSig {type_ = ArrayUOT} , Aeson.Array {}) -> True
-    (TypeSig {type_ = ObjectT} , Aeson.Object {}) -> True
+    (HoleSig {nullable = True}, Aeson.Null) -> True
+    (HoleSig {type_ = BoolT} , Aeson.Bool {}) -> True
+    (HoleSig {type_ = NumberT} , Aeson.Number {}) -> True
+    (HoleSig {type_ = StringT} , Aeson.String {}) -> True
+    (HoleSig {type_ = StringCIT} , Aeson.String {}) -> True
+    (HoleSig {type_ = ArrayT} , Aeson.Array {}) -> True
+    (HoleSig {type_ = ArrayUOT} , Aeson.Array {}) -> True
+    (HoleSig {type_ = ObjectT} , Aeson.Object {}) -> True
     (_, _) -> False
 
 matchArrayUO
   :: Validation (NonEmpty Error) (HashMap Text Aeson.Value)
   -> [PathElem]
-  -> Box (Vector (Value Aeson.Value))
+  -> Box (Vector (Matcher Aeson.Value))
   -> Vector Aeson.Value
   -> Validation (NonEmpty Error) (HashMap Text Aeson.Value)
-matchArrayUO mismatched path Box {knownValues, extendable} xs = do
-  -- Collect possible indices in `xs` for each position in `knownValues`.
-  let indices = map (collectMatchingIndices (toList xs)) (toList knownValues)
-  -- Find all unique valid ways to map each position in `knownValues` to
+matchArrayUO mismatched path Box {values, extra} xs = do
+  -- Collect possible indices in `xs` for each position in `values`.
+  let indices = map (collectMatchingIndices (toList xs)) (toList values)
+  -- Find all unique valid ways to map each position in `values` to
   -- a member of `xs`.
   case allIndicesAssignments indices of
     -- If no assignment has been found, we give up.
     [] ->
       mismatched
     ivs : _
-      -- If some positions in `knownValues` cannot be mapped to
+      -- If some positions in `values` cannot be mapped to
       -- anything in `xs`, we give up.
-      | length ivs < length knownValues ->
+      | length ivs < length values ->
         mismatched
       -- If there are some members of `xs` that aren't matched by
-      -- anything in `knownValues`, we check if the pattern is
-      -- extendable.
-      | length ivs < length xs && not extendable -> do
+      -- anything in `values`, we check if the 'Matcher' allows for
+      -- extra values.
+      | length ivs < length xs && not extra -> do
         let is = Set.fromList (map fst ivs)
             extraValues = Vector.ifilter (\i _ -> not (i `Set.member` is)) xs
         extraArrayValues path extraValues
@@ -238,7 +235,7 @@ instance Ord I where
 
 mismatch
   :: [PathElem]
-  -> Value Aeson.Value
+  -> Matcher Aeson.Value
   -> Aeson.Value
   -> Validation (NonEmpty Error) a
 mismatch (Path . reverse -> path) matcher given =
@@ -246,7 +243,7 @@ mismatch (Path . reverse -> path) matcher given =
 
 mistype
   :: [PathElem]
-  -> Value Aeson.Value
+  -> Matcher Aeson.Value
   -> Aeson.Value
   -> Validation (NonEmpty Error) a
 mistype (Path . reverse -> path) matcher given =
@@ -347,7 +344,7 @@ instance Aeson.ToJSON Error where
 -- is wrong, or the value itself does not match.
 data Mismatch = MkMismatch
   { path    :: Path
-  , matcher :: Value Aeson.Value
+  , matcher :: Matcher Aeson.Value
   , given   :: Aeson.Value
   } deriving (Show, Eq)
 
@@ -388,7 +385,7 @@ instance PP.Pretty MissingPathElem where
       , PP.hsep ["missing:", PP.pPrint missing]
       ]
 
--- | Unless an extendable matcher is used, any extra values in an array
+-- | Unless an permissive matcher is used, any extra values in an array
 -- missing in the matcher will trigger this error.
 data ExtraArrayValues = MkExtraArrayValues
   { path   :: Path
@@ -412,7 +409,7 @@ instance PP.Pretty ExtraArrayValues where
           ]
       ]
 
--- | Unless an extendable matcher is used, any extra key-value pairs in
+-- | Unless an permissive matcher is used, any extra key-value pairs in
 -- an object missing in the matcher will trigger this error.
 data ExtraObjectValues = MkExtraObjectValues
   { path   :: Path
