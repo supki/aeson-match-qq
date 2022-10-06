@@ -193,8 +193,18 @@ object = do
 
 key :: Atto.Parser Text
 key =
-  Aeson.jstring <|>
-    fmap (Text.decodeUtf8 . ByteString.pack) (Atto.many1 (Atto.satisfy (\c -> Char.chr (fromIntegral c) `notElem` ("\\ \":;><${}[]," :: String))))
+  Aeson.jstring <|> bareKey
+
+bareKey :: Atto.Parser Text
+bareKey =
+  fmap
+    (Text.decodeUtf8 . ByteString.pack)
+    (Atto.many1
+      (Atto.satisfy
+        (p . Char.chr . fromIntegral)))
+ where
+  p c =
+    not (Char.isSpace c || c `elem` ("\\\":;><${}[],#" :: String))
 
 rest :: Atto.Parser ()
 rest =

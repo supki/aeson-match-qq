@@ -1,3 +1,8 @@
+1.6.1
+=====
+
+  * Fixed another parser problem (https://github.com/supki/aeson-match-qq/pull/27)
+
 1.6.0
 =====
 

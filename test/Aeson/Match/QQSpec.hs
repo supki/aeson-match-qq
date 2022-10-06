@@ -125,9 +125,18 @@ spec = do
           , given = [aesonQQ| 7 |]
           })
 
-    it "named holes" $ do
-      match [qq| {foo: _hole} |] [aesonQQ| {foo: {bar: {baz: [1, 4]}}} |] `shouldBe`
-        pure (HashMap.singleton "hole" [aesonQQ| {bar: {baz: [1, 4]}} |])
+    context "named holes" $ do
+      it "matches" $
+        match [qq| {foo: _hole} |] [aesonQQ| {foo: {bar: {baz: [1, 4]}}} |] `shouldBe`
+          pure (HashMap.singleton "hole" [aesonQQ| {bar: {baz: [1, 4]}} |])
+
+      -- https://github.com/supki/aeson-match-qq/issues/26
+      it "#26" $
+        match [qq|
+          { foo: _hole
+          }
+        |] [aesonQQ| {foo: {bar: {baz: [1, 4]}}} |] `shouldBe`
+          pure (HashMap.singleton "hole" [aesonQQ| {bar: {baz: [1, 4]}} |])
 
     context "unordered array" $
       it "named holes" $ do
