@@ -18,8 +18,7 @@
 {-# OPTIONS_GHC -Wall #-}
 module Main (main) where
 
-import           Aeson.Match.QQ (qq)
-import qualified Aeson.Match.QQ as Match
+import           Aeson.Match.QQ (Matcher, match, qq)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.QQ (aesonQQ)
 import qualified Data.Text.Lazy as Text.Lazy
@@ -55,12 +54,12 @@ spec =
           |]
         }
 
-matchJson :: Match.Value Aeson.Value -> MatchBody
+matchJson :: Matcher Aeson.Value -> MatchBody
 matchJson val = MatchBody matcher
  where
   matcher _headers body = do
     let Just json = Aeson.decode body
-    case Match.match val json of
+    case match val json of
       Left failures ->
         pure (pp failures)
       Right _ ->

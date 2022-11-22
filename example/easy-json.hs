@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wall #-}
 module Main (main) where
 
-import           Aeson.Match.QQ (Value, match, qq)
+import           Aeson.Match.QQ (Matcher, match, qq)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.QQ (aesonQQ)
 import qualified Data.HashMap.Strict as HashMap
@@ -31,7 +31,7 @@ main =
     _ ->
       error "sometimes, matchers fail"
 
-matcher :: Value Aeson.Value
+matcher :: Matcher Aeson.Value
 matcher =
   [qq|
     { "people":

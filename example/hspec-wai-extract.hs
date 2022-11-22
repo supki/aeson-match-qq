@@ -30,8 +30,7 @@
 {-# OPTIONS_GHC -Wall #-}
 module Main (main) where
 
-import           Aeson.Match.QQ (qq)
-import qualified Aeson.Match.QQ as Match
+import           Aeson.Match.QQ (Matcher, match, qq)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.QQ (aesonQQ)
 import           Data.HashMap.Strict (HashMap)
@@ -80,7 +79,7 @@ spec =
 
 shouldMatchJson
   :: WaiSession st SResponse
-  -> (Int, Match.Value Aeson.Value)
+  -> (Int, Matcher Aeson.Value)
   -> WaiSession st (HashMap Text Aeson.Value)
 action `shouldMatchJson` (code, matcher) = do
   res <- action
@@ -89,15 +88,15 @@ action `shouldMatchJson` (code, matcher) = do
     , matchBody = matchJson matcher
     }
   let Just val = Aeson.decode (simpleBody res)
-      Right x = Match.match matcher val
+      Right x = match matcher val
   pure x
 
-matchJson :: Match.Value Aeson.Value -> MatchBody
+matchJson :: Matcher Aeson.Value -> MatchBody
 matchJson val = MatchBody matcher
  where
   matcher _headers body = do
     let Just json = Aeson.decode body
-    case Match.match val json of
+    case match val json of
       Left failures ->
         pure (pp failures)
       Right _ ->

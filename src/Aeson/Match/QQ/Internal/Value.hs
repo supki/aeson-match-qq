@@ -30,12 +30,10 @@ import qualified Data.CaseInsensitive as CI
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.Scientific (Scientific)
-import           Data.String (fromString)
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
-import           Language.Haskell.TH (Exp(..), Lit(..))
+import           Language.Haskell.TH (Exp(..))
 import           Language.Haskell.TH.Syntax
   ( Lift(..)
 #if MIN_VERSION_template_haskell(2,17,0)
@@ -139,48 +137,71 @@ type Object ext = Box (HashMap Text (Matcher ext))
 instance ext ~ Exp => Lift (Matcher ext) where
   lift = \case
     Hole type_ name ->
-      [| Hole type_ $(pure (maybe (ConE 'Nothing) (AppE (ConE 'Just) . AppE (VarE 'fromString) . LitE . textL) name)) :: Matcher Aeson.Value |]
+      [| Hole type_ name :: Matcher Aeson.Value |]
     Null ->
       [| Null :: Matcher Aeson.Value |]
     Bool b ->
       [| Bool b :: Matcher Aeson.Value |]
     Number n ->
-      [| Number (fromRational $(pure (LitE (RationalL (toRational n))))) :: Matcher Aeson.Value |]
+      [| Number n :: Matcher Aeson.Value |]
     String str ->
-      [| String (fromString $(pure (LitE (textL str)))) :: Matcher Aeson.Value |]
-    StringCI str ->
-      [| StringCI (fromString $(pure (LitE (textL (CI.original str))))) :: Matcher Aeson.Value |]
-    Array Box {values, extra} -> [|
-        Array Box
-          { values =
-              Vector.fromList $(fmap (ListE . Vector.toList) (traverse lift values))
-          , extra
-          } :: Matcher Aeson.Value
+      [| String str :: Matcher Aeson.Value |]
+    StringCI ci -> let
+        original = CI.original ci
+      in
+        [| StringCI (CI.mk original) :: Matcher Aeson.Value |]
+    Array Box {values, extra} -> let
+        valuesList = Vector.toList values
+      in
+        [| Array Box {values = Vector.fromList valuesList, extra} :: Matcher Aeson.Value |]
+    ArrayUO Box {values, extra} -> let
+        valuesList = Vector.toList values
+      in
+        [| ArrayUO Box {values = Vector.fromList valuesList, extra} :: Matcher Aeson.Value |]
+    Object Box {values, extra} -> let
+        valuesList = HashMap.toList values
+      in
+        [| Object Box {values = HashMap.fromList valuesList, extra} :: Matcher Aeson.Value |]
+    Ext ext -> [|
+        Ext (let
+               toValue = Aeson.decode . Aeson.encodingToLazyByteString . Aeson.toEncoding
+               ~(Just val) = toValue $(pure ext)
+             in
+               val) :: Matcher Aeson.Value
       |]
-    ArrayUO Box {values, extra} -> [|
-        ArrayUO Box
-          { values =
-              Vector.fromList $(fmap (ListE . Vector.toList) (traverse lift values))
-          , extra
-          } :: Matcher Aeson.Value
-      |]
-    Object Box {values, extra} -> [|
-        Object Box
-          { values =
-              HashMap.fromList $(fmap (ListE . map (\(k, v) -> TupE [Just (LitE (textL k)), Just v]) . HashMap.toList) (traverse lift values))
-          , extra
-          } :: Matcher Aeson.Value
-      |]
+  liftTyped = \case
+    Hole type_ name ->
+      [|| Hole type_ name ||]
+    Null ->
+      [|| Null ||]
+    Bool b ->
+      [|| Bool b ||]
+    Number n ->
+      [|| Number n ||]
+    String str ->
+      [|| String str ||]
+    StringCI ci -> let
+        original = CI.original ci
+      in
+        [|| StringCI (CI.mk original) ||]
+    Array Box {values, extra} -> let
+        valuesList = Vector.toList values
+      in
+        [|| Array Box {values = Vector.fromList valuesList, extra} ||]
+    ArrayUO Box {values, extra} -> let
+        valuesList = Vector.toList values
+      in
+        [|| ArrayUO Box {values = Vector.fromList valuesList, extra} ||]
+    Object Box {values, extra} -> let
+        valuesList = HashMap.toList values
+      in
+        [|| Object Box {values = HashMap.fromList valuesList, extra} ||]
     Ext ext ->
-      [| Ext (let ~(Just val) = Aeson.decode (Aeson.encodingToLazyByteString (Aeson.toEncoding $(pure ext))) in val) :: Matcher Aeson.Value |]
-   where
-    textL =
-      StringL . Text.unpack
-  liftTyped =
+      -- ^ This is fundamentally type-unsafe as long as we try to splice `Exp` in.
 #if MIN_VERSION_template_haskell(2,17,0)
-    unsafeCodeCoerce . lift
+      unsafeCodeCoerce (lift (Ext ext))
 #else
-    unsafeTExpCoerce . lift
+      unsafeTExpCoerce (lift (Ext ext))
 #endif
 
 -- | _hole type signature
