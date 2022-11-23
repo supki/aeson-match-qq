@@ -17,6 +17,7 @@ module Aeson.Match.QQ.Internal.Value
   , HoleSig(..)
   , Type(..)
   , embed
+  , quote
   ) where
 
 import           Data.Aeson ((.=))
@@ -24,25 +25,20 @@ import qualified Data.Aeson as Aeson
 #if MIN_VERSION_aeson(2,0,0)
 import qualified Data.Aeson.KeyMap as Aeson (toHashMapText)
 #endif
-import qualified Data.Aeson.Encoding.Internal as Aeson (encodingToLazyByteString)
 import           Data.CaseInsensitive (CI)
 import qualified Data.CaseInsensitive as CI
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.Scientific (Scientific)
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
-import           Language.Haskell.TH (Exp(..))
-import           Language.Haskell.TH.Syntax
-  ( Lift(..)
-#if MIN_VERSION_template_haskell(2,17,0)
-  , unsafeCodeCoerce
-#else
-  , unsafeTExpCoerce
-#endif
-  )
+import           Language.Haskell.TH (Q, Exp(..), Lit(..))
+import           Language.Haskell.TH.Syntax (Lift(..))
 import           Prelude hiding (any, null)
+
+import           Aeson.Match.QQ.AesonUtils (toJSONE)
 
 
 -- | A value constructed using 'qq' that attempts to match
@@ -131,78 +127,57 @@ type Array ext = Box (Vector (Matcher ext))
 
 type Object ext = Box (HashMap Text (Matcher ext))
 
--- | Convert `'Matcher' 'Exp'` to `'Matcher' 'Aeson.Value'`. This uses a roundabout way to get
--- `Aeson.Value` from `ToJSON.toEncoding` to avoid calling `Aeson.toJSON` which may be
--- undefined for some datatypes.
-instance ext ~ Exp => Lift (Matcher ext) where
-  lift = \case
-    Hole type_ name ->
-      [| Hole type_ name :: Matcher Aeson.Value |]
-    Null ->
-      [| Null :: Matcher Aeson.Value |]
-    Bool b ->
-      [| Bool b :: Matcher Aeson.Value |]
-    Number n ->
-      [| Number n :: Matcher Aeson.Value |]
-    String str ->
-      [| String str :: Matcher Aeson.Value |]
-    StringCI ci -> let
-        original = CI.original ci
-      in
-        [| StringCI (CI.mk original) :: Matcher Aeson.Value |]
-    Array Box {values, extra} -> let
-        valuesList = Vector.toList values
-      in
-        [| Array Box {values = Vector.fromList valuesList, extra} :: Matcher Aeson.Value |]
-    ArrayUO Box {values, extra} -> let
-        valuesList = Vector.toList values
-      in
-        [| ArrayUO Box {values = Vector.fromList valuesList, extra} :: Matcher Aeson.Value |]
-    Object Box {values, extra} -> let
-        valuesList = HashMap.toList values
-      in
-        [| Object Box {values = HashMap.fromList valuesList, extra} :: Matcher Aeson.Value |]
-    Ext ext -> [|
-        Ext (let
-               toValue = Aeson.decode . Aeson.encodingToLazyByteString . Aeson.toEncoding
-               ~(Just val) = toValue $(pure ext)
-             in
-               val) :: Matcher Aeson.Value
-      |]
-  liftTyped = \case
-    Hole type_ name ->
-      [|| Hole type_ name ||]
-    Null ->
-      [|| Null ||]
-    Bool b ->
-      [|| Bool b ||]
-    Number n ->
-      [|| Number n ||]
-    String str ->
-      [|| String str ||]
-    StringCI ci -> let
-        original = CI.original ci
-      in
-        [|| StringCI (CI.mk original) ||]
-    Array Box {values, extra} -> let
-        valuesList = Vector.toList values
-      in
-        [|| Array Box {values = Vector.fromList valuesList, extra} ||]
-    ArrayUO Box {values, extra} -> let
-        valuesList = Vector.toList values
-      in
-        [|| ArrayUO Box {values = Vector.fromList valuesList, extra} ||]
-    Object Box {values, extra} -> let
-        valuesList = HashMap.toList values
-      in
-        [|| Object Box {values = HashMap.fromList valuesList, extra} ||]
-    Ext ext ->
-      -- ^ This is fundamentally type-unsafe as long as we try to splice `Exp` in.
-#if MIN_VERSION_template_haskell(2,17,0)
-      unsafeCodeCoerce (lift (Ext ext))
-#else
-      unsafeTExpCoerce (lift (Ext ext))
-#endif
+-- | It may be tempting to make this the 'Lift' instance for 'Matcher', but I don't
+-- think it would be correct. We can get a lot from re-using 'Lift' machinery: namely,
+-- we can cpmpletely bypass manual 'Exp' construction. But, fundamentally, 'Lift' is
+-- for "serializing" Haskell values and it is not what we are attempting here.
+quote :: Matcher Exp -> Q Exp
+quote = \case
+  Hole type_ name ->
+    [| Hole type_ name :: Matcher Aeson.Value |]
+  Null ->
+    [| Null :: Matcher Aeson.Value |]
+  Bool b ->
+    [| Bool b :: Matcher Aeson.Value |]
+  Number n ->
+    [| Number n :: Matcher Aeson.Value |]
+  String str ->
+    [| String str :: Matcher Aeson.Value |]
+  StringCI ci -> let
+      original = CI.original ci
+    in
+      [| StringCI (CI.mk original) :: Matcher Aeson.Value |]
+  Array Box {values, extra} -> do
+    let
+      quoted =
+        fmap ListE (traverse quote (Vector.toList values))
+    [| Array Box
+         { values = Vector.fromList $quoted
+         , extra
+         } :: Matcher Aeson.Value |]
+  ArrayUO Box {values, extra} -> do
+    let
+      quoted =
+        fmap ListE (traverse quote (Vector.toList values))
+    [| ArrayUO Box
+         { values = Vector.fromList $quoted
+         , extra
+         } :: Matcher Aeson.Value |]
+  Object Box {values, extra} -> do
+    let
+      quoted =
+        fmap toExp (traverse (traverse quote) (HashMap.toList values))
+      toExp =
+        ListE . (map (\(k, v) -> tup2 (LitE (StringL (Text.unpack k)), v)))
+      tup2 (a, b) =
+        TupE [Just a, Just b]
+    [| Object Box
+         { values = HashMap.fromList $quoted
+         , extra
+         } :: Matcher Aeson.Value |]
+  -- | This is fundamentally type-unsafe as long as we try to splice `Exp` in.
+  Ext ext ->
+    [| Ext (toJSONE $(pure ext)) :: Matcher Aeson.Value |]
 
 -- | _hole type signature
 data HoleSig = HoleSig

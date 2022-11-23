@@ -1,7 +1,8 @@
 next
 ====
 
-  * Typed-TH experimentation.
+  * Removed some of conditional compilation, by no longer pretending that
+  we provide `liftTyped` for `Matcher`.
 
 1.6.1
 =====

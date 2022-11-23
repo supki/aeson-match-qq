@@ -22,7 +22,6 @@ module Aeson.Match.QQ
 import           Data.String (IsString(..))
 import qualified Data.Text.Encoding as Text
 import           Language.Haskell.TH.Quote (QuasiQuoter(..))
-import           Language.Haskell.TH.Syntax (Lift(..))
 import qualified Text.PrettyPrint as PP (render)
 import qualified Text.PrettyPrint.HughesPJClass as PP (Pretty(..))
 
@@ -44,6 +43,7 @@ import           Aeson.Match.QQ.Internal.Value
   , Object
   , HoleSig(..)
   , Type(..)
+  , quote
   )
 
 
@@ -55,7 +55,7 @@ qq = QuasiQuoter
         Left err ->
           error ("Aeson.Match.QQ.qq: " ++ err)
         Right val ->
-          lift val
+          quote val
   , quotePat =
       \_ -> error "Aeson.Match.QQ.qq: no quotePat"
   , quoteType =
