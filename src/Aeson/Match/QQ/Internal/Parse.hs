@@ -97,7 +97,12 @@ any = do
   _ <- Atto.word8 HoleP
   name <- fmap Just key <|> pure Nothing
   spaces
-  expectedType <- optional holeSig
+  b <- optional Atto.peekWord8'
+  expectedType <- case b of
+    Just ColonP ->
+      fmap Just holeSig
+    _ ->
+      pure Nothing
   pure (Hole expectedType name)
 
 null :: Atto.Parser (Matcher Exp)
@@ -251,7 +256,7 @@ holeSig = do
     , p "array" ArrayT
     , p "unordered-array" ArrayUOT
     , p "object" ObjectT
-    ]
+    ] Atto.<?> "unknown type in hole signature"
  where
   p name typeName = do
     _ <- Atto.string name
