@@ -208,6 +208,10 @@ spec = do
           , given = Aeson.Number 4
           })
 
+    it "#32" $ do
+      parse "null some garbage" `shouldBe`
+        Left "trailing garbage after a Matcher value: endOfInput"
+
     it "pretty" $ do
       prettyError (Mismatch MkMismatch
         { path = [Key "foo", Idx 0, Key "bar"]

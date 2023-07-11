@@ -168,7 +168,7 @@ quote = \case
       quoted =
         fmap toExp (traverse (traverse quote) (HashMap.toList values))
       toExp =
-        ListE . (map (\(k, v) -> tup2 (LitE (StringL (Text.unpack k)), v)))
+        ListE . map (\(k, v) -> tup2 (LitE (StringL (Text.unpack k)), v))
       tup2 (a, b) =
         TupE [Just a, Just b]
     [| Object Box

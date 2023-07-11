@@ -33,40 +33,45 @@ import           Aeson.Match.QQ.Internal.Value
   )
 
 
+-- | An 'attoparsec' parser for a 'Matcher'.
+--
+-- /Note:/ consumes spaces before and after the matcher.
 parse :: ByteString -> Either String (Matcher Exp)
 parse =
-  Atto.parseOnly value
+  Atto.parseOnly (value <* eof)
 
 value :: Atto.Parser (Matcher Exp)
-value = do
-  spaces
-  b <- Atto.peekWord8'
-  case b of
-    HoleP ->
-      any
-    NP ->
-      null
-    FP ->
-      false
-    TP ->
-      true
-    DoubleQuoteP ->
-      string
-    OpenSquareBracketP ->
-      array
-    OpenParenP ->
-      arrayUO <|> stringCI
-    OpenCurlyBracketP ->
-      object
-    HashP ->
-      haskellExp
-    _ | startOfNumber b ->
-        number
-      | otherwise ->
-        fail ("a value cannot start with " ++ show b)
+value =
+  between spaces spaces $ do
+    b <- Atto.peekWord8'
+    case b of
+      HoleP ->
+        any
+      NP ->
+        null
+      FP ->
+        false
+      TP ->
+        true
+      DoubleQuoteP ->
+        string
+      OpenSquareBracketP ->
+        array
+      OpenParenP ->
+        arrayUO <|> stringCI
+      OpenCurlyBracketP ->
+        object
+      HashP ->
+        haskellExp
+      _ | startOfNumber b ->
+          number
+        | otherwise ->
+          fail ("a value cannot start with " ++ show b)
  where
   startOfNumber b =
     b >= ZeroP && b <= NineP || b == MinusP
+  between a b p =
+    a *> p <* b
 
 any :: Atto.Parser (Matcher Exp)
 any = do
@@ -116,7 +121,6 @@ array = do
  where
   loop acc !n = do
     val <- value
-    spaces
     b <- Atto.satisfy (\w -> w == CommaP || w == CloseSquareBracketP) Atto.<?> "',' or ']'"
     case b of
       CommaP -> do
@@ -164,9 +168,7 @@ object = do
     k <- key
     spaces
     _ <- Atto.word8 ColonP
-    spaces
     val <- value
-    spaces
     b <- Atto.satisfy (\b -> b == CommaP || b == CloseCurlyBracketP) Atto.<?> "',' or '}'"
     case b of
       CommaP -> do
@@ -236,6 +238,10 @@ holeSig = do
     _ <- Atto.string name
     q <- optional (Atto.word8 QuestionMarkP)
     pure (HoleSig typeName (isJust q))
+
+eof :: Atto.Parser ()
+eof =
+  Atto.endOfInput Atto.<?> "trailing garbage after a Matcher value"
 
 -- This function has been stolen from aeson.
 -- ref: https://hackage.haskell.org/package/aeson-1.4.6.0/docs/src/Data.Aeson.Parser.Internal.html#skipSpace
