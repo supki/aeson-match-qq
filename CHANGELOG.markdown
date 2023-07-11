@@ -6,6 +6,8 @@ next
 
   * Fixed yet another embarrassing parser bug (https://github.com/supki/aeson-match-qq/pull/33)
 
+  * Implemented `[...]` and `{...}` as shortcuts to `_ : array` and `_ : object` respectively (https://github.com/supki/aeson-match-qq/pull/34)
+
 1.6.1
 =====
 

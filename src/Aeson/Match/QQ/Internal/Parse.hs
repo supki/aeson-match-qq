@@ -1,6 +1,8 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns #-}
 module Aeson.Match.QQ.Internal.Parse
   ( parse
   ) where
@@ -41,8 +43,8 @@ parse =
   Atto.parseOnly (value <* eof)
 
 value :: Atto.Parser (Matcher Exp)
-value =
-  between spaces spaces $ do
+value = do
+  val <- between spaces spaces $ do
     b <- Atto.peekWord8'
     case b of
       HoleP ->
@@ -67,11 +69,28 @@ value =
           number
         | otherwise ->
           fail ("a value cannot start with " ++ show b)
+  pure (optimize val)
  where
   startOfNumber b =
     b >= ZeroP && b <= NineP || b == MinusP
   between a b p =
     a *> p <* b
+
+optimize :: Matcher Exp -> Matcher Exp
+optimize = \case
+  -- [...] -> _ : array
+  Array Box {extra = True, values = (Vector.null -> True)} ->
+    Hole (Just (HoleSig ArrayT False)) Nothing
+  -- this optimization is probably never going to be used,
+  -- but I'll include it for completeness:
+  -- (unordered) [...] -> _ : unordered-array
+  ArrayUO Box {extra = True, values = (Vector.null -> True)} ->
+    Hole (Just (HoleSig ArrayUOT False)) Nothing
+  -- {...} -> _ : object
+  Object Box {extra = True, values = (HashMap.null -> True)} ->
+    Hole (Just (HoleSig ObjectT False)) Nothing
+  val ->
+    val
 
 any :: Atto.Parser (Matcher Exp)
 any = do
@@ -120,30 +139,30 @@ array = do
       loop [] 0
  where
   loop acc !n = do
-    val <- value
-    b <- Atto.satisfy (\w -> w == CommaP || w == CloseSquareBracketP) Atto.<?> "',' or ']'"
+    spaces
+    b <- Atto.peekWord8'
     case b of
-      CommaP -> do
-        spaces
-        b' <- Atto.peekWord8'
-        case b' of
-          DotP -> do
-            rest
-            spaces
-            _ <- Atto.word8 CloseSquareBracketP
-            pure $ Array Box
-              { values = Vector.fromListN (n + 1) (reverse (val : acc))
-              , extra = True
-              }
-          _ ->
-            loop (val : acc) (n + 1)
-      CloseSquareBracketP ->
-        pure $ Array Box
-          { values = Vector.fromListN (n + 1) (reverse (val : acc))
-          , extra = False
-          }
-      _ ->
-        error "impossible"
+      DotP -> do
+       rest
+       spaces
+       _ <- Atto.word8 CloseSquareBracketP
+       pure $ Array Box
+         { values = Vector.fromListN (n + 1) (reverse acc)
+         , extra = True
+         }
+      _ -> do
+       val <- value
+       sep <- Atto.satisfy (\w -> w == CommaP || w == CloseSquareBracketP) Atto.<?> "',' or ']'"
+       case sep of
+         CommaP ->
+           loop (val : acc) (n + 1)
+         CloseSquareBracketP ->
+           pure $ Array Box
+             { values = Vector.fromListN (n + 1) (reverse (val : acc))
+             , extra = False
+             }
+         _ ->
+           error "impossible"
 
 arrayUO :: Atto.Parser (Matcher Exp)
 arrayUO = do
@@ -165,33 +184,33 @@ object = do
       loop []
  where
   loop acc = do
-    k <- key
     spaces
-    _ <- Atto.word8 ColonP
-    val <- value
-    b <- Atto.satisfy (\b -> b == CommaP || b == CloseCurlyBracketP) Atto.<?> "',' or '}'"
+    b <- Atto.peekWord8'
     case b of
-      CommaP -> do
+      DotP -> do
+        rest
         spaces
-        b' <- Atto.peekWord8'
-        case b' of
-          DotP -> do
-            rest
-            spaces
-            _ <- Atto.word8 CloseCurlyBracketP
+        _ <- Atto.word8 CloseCurlyBracketP
+        pure $ Object Box
+          { values = HashMap.fromList acc
+          , extra = True
+          }
+      _ -> do
+        k <- key
+        spaces
+        _ <- Atto.word8 ColonP
+        val <- value
+        sep <- Atto.satisfy (\w -> w == CommaP || w == CloseCurlyBracketP) Atto.<?> "',' or '}'"
+        case sep of
+          CommaP ->
+            loop ((k, val) : acc)
+          CloseCurlyBracketP ->
             pure $ Object Box
               { values = HashMap.fromList ((k, val) : acc)
-              , extra = True
+              , extra = False
               }
           _ ->
-            loop ((k, val) : acc)
-      CloseCurlyBracketP ->
-        pure $ Object Box
-          { values = HashMap.fromList ((k, val) : acc)
-          , extra = False
-          }
-      _ ->
-        error "impossible"
+            error "impossible"
 
 key :: Atto.Parser Text
 key =
