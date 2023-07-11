@@ -173,6 +173,12 @@ spec = do
             , extra = False
             })
 
+    -- https://github.com/supki/aeson-match-qq/issues/12
+    it "#12" $ do
+      [qq| [ ... ] |] `shouldBe` [qq| _ : array |]
+      [qq| (unordered) [ ... ] |] `shouldBe` [qq| _ : unordered-array |]
+      [qq| { ... } |] `shouldBe` [qq| _ : object |]
+
     -- https://github.com/supki/aeson-match-qq/issues/13
     it "#13" $
       [qq| "Слава Україні" |] `shouldMatch` [aesonQQ| "Слава Україні" |]
@@ -208,6 +214,7 @@ spec = do
           , given = Aeson.Number 4
           })
 
+    -- https://github.com/supki/aeson-match-qq/issues/32
     it "#32" $ do
       parse "null some garbage" `shouldBe`
         Left "trailing garbage after a Matcher value: endOfInput"
