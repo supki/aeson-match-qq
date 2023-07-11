@@ -17,6 +17,8 @@ module Aeson.Match.QQ
   , Type(..)
   , Path(..)
   , PathElem(..)
+
+  , parse
   ) where
 
 import           Data.String (IsString(..))

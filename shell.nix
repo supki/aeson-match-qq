@@ -7,6 +7,7 @@ pkgs.mkShell rec {
 
   buildInputs = with pkgs; [
     ghc
+    hlint
     stack
     zlib
   ];

@@ -4,6 +4,8 @@ next
   * Removed some of conditional compilation, by no longer pretending that
   we provide `liftTyped` for `Matcher`.
 
+  * Fixed yet another embarrassing parser bug (https://github.com/supki/aeson-match-qq/pull/33)
+
 1.6.1
 =====
 
