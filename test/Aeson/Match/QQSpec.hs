@@ -145,6 +145,7 @@ spec = do
         match [qq| (unordered) [{foo: _hole}, ...] |] [aesonQQ| [{foo: 2}, 1] |] `shouldBe`
           pure (HashMap.singleton "hole" [aesonQQ| 2 |])
 
+  describe "repro" $ do
     -- https://github.com/supki/aeson-match-qq/issues/7
     it "#7" $ do
       match [qq| {foo: _} |] [aesonQQ| {} |] `shouldBe`
@@ -219,6 +220,7 @@ spec = do
       parse "null some garbage" `shouldBe`
         Left "trailing garbage after a Matcher value: endOfInput"
 
+  describe "pretty-printing" $
     it "pretty" $ do
       prettyError (Mismatch MkMismatch
         { path = [Key "foo", Idx 0, Key "bar"]
@@ -227,7 +229,9 @@ spec = do
         }) `shouldBe`
           "  error: value does not match\n\
           \   path: .foo[0].bar\n\
-          \matcher: {\"value\":\"foo\",\"type\":\"string\"}\n\
+          \matcher: [qq|\n\
+          \           \"foo\"\n\
+          \         |]\n\
           \  given: \"bar\""
       prettyError (Mistype MkMismatch
         { path = [Key "foo", Idx 0, Key "bar"]
@@ -236,7 +240,9 @@ spec = do
         }) `shouldBe`
           "  error: type of value does not match\n\
           \   path: .foo[0].bar\n\
-          \matcher: {\"value\":\"foo\",\"type\":\"string\"}\n\
+          \matcher: [qq|\n\
+          \           \"foo\"\n\
+          \         |]\n\
           \  given: 4"
       prettyError (MissingPathElem MkMissingPathElem
         { path = [Key "foo", Idx 0, Key "bar"]
