@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.7.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
@@ -30,6 +30,7 @@ library
       Aeson.Match.QQ.AesonUtils
       Aeson.Match.QQ.Internal.Match
       Aeson.Match.QQ.Internal.Parse
+      Aeson.Match.QQ.Internal.PrettyPrint
       Aeson.Match.QQ.Internal.Value
   other-modules:
       Paths_aeson_match_qq
@@ -57,6 +58,7 @@ test-suite spec
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Aeson.Match.QQ.Internal.PrettyPrintSpec
       Aeson.Match.QQSpec
       Paths_aeson_match_qq
   hs-source-dirs:

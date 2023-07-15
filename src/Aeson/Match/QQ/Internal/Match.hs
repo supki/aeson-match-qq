@@ -59,6 +59,7 @@ import qualified Text.PrettyPrint as PP
   )
 import qualified Text.PrettyPrint.HughesPJClass as PP (Pretty(..))
 
+import           Aeson.Match.QQ.Internal.PrettyPrint (pp)
 import           Aeson.Match.QQ.Internal.Value
   ( Matcher(..)
   , Box(..)
@@ -360,7 +361,7 @@ instance PP.Pretty Mismatch where
   pPrint MkMismatch {..} =
     PP.vcat
       [ PP.hsep ["   path:", PP.pPrint path]
-      , PP.hsep ["matcher:", ppJson matcher]
+      , PP.hsep ["matcher:", pp matcher]
       , PP.hsep ["  given:", ppJson given]
       ]
 

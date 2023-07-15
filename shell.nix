@@ -1,5 +1,5 @@
 { pkgs ? import <nixpkgs> {}
-, ghc ? pkgs.haskell.compiler.ghc8107
+, ghc ? pkgs.haskell.compiler.ghc902
 , stack ? pkgs.stack
 }:
 pkgs.mkShell rec {
@@ -13,5 +13,6 @@ pkgs.mkShell rec {
   ];
 
   shellHook = ''
+    chmod go-w . .ghci
   '';
 }
