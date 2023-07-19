@@ -7,7 +7,7 @@ module Aeson.Match.QQSpec (spec) where
 
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.QQ (aesonQQ)
-import           Data.List.NonEmpty (NonEmpty)
+import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.HashMap.Strict as HashMap
 import           Test.Hspec
 
@@ -195,25 +195,45 @@ spec = do
           })
       -- string !~ number
       match [qq| "foo" |] [aesonQQ| 4 |] `shouldBe`
-        throwE (Mistype MkMismatch
+        throwE (Mistype MkTypeMismatch
           { path = []
+          , expected = StringT
           , matcher = String "foo"
           , given = Aeson.Number 4
           })
       -- string !~ null
       match [qq| "foo" |] [aesonQQ| null |] `shouldBe`
-        throwE (Mistype MkMismatch
+        throwE (Mistype MkTypeMismatch
           { path = []
+          , expected = StringT
           , matcher = String "foo"
           , given = Aeson.Null
           })
       -- null !~ number
       match [qq| null |] [aesonQQ| 4 |] `shouldBe`
-        throwE (Mistype MkMismatch
+        throwE (Mismatch MkMismatch
           { path = []
           , matcher = Null
           , given = Aeson.Number 4
           })
+
+    -- https://github.com/supki/aeson-match-qq/issues/28
+    it "#28" $ do
+      let
+        Left (err :| _) =
+          match [qq| [{foo: 4, bar: 7}] |] [aesonQQ| {foo: 4, bar: 7}|]
+      prettyError err `shouldBe`
+          "   error: type of value does not match\n\
+          \expected: array\n\
+          \  actual: object\n\
+          \    path: .\n\
+          \ matcher: [qq|\n\
+          \            [ { foo: 4.0\n\
+          \              , bar: 7.0\n\
+          \              }\n\
+          \            ]\n\
+          \          |]\n\
+          \   given: {\"bar\":7,\"foo\":4}"
 
     -- https://github.com/supki/aeson-match-qq/issues/29
     it "#29" $ do
@@ -238,17 +258,20 @@ spec = do
           \           \"foo\"\n\
           \         |]\n\
           \  given: \"bar\""
-      prettyError (Mistype MkMismatch
+      prettyError (Mistype MkTypeMismatch
         { path = [Key "foo", Idx 0, Key "bar"]
+        , expected = StringT
         , matcher = String "foo"
         , given = Aeson.Number 4
         }) `shouldBe`
-          "  error: type of value does not match\n\
-          \   path: .foo[0].bar\n\
-          \matcher: [qq|\n\
-          \           \"foo\"\n\
-          \         |]\n\
-          \  given: 4"
+          "   error: type of value does not match\n\
+          \expected: string\n\
+          \  actual: number\n\
+          \    path: .foo[0].bar\n\
+          \ matcher: [qq|\n\
+          \            \"foo\"\n\
+          \          |]\n\
+          \   given: 4"
       prettyError (MissingPathElem MkMissingPathElem
         { path = [Key "foo", Idx 0, Key "bar"]
         , missing = Idx 1

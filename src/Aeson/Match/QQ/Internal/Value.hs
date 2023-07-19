@@ -37,6 +37,7 @@ import qualified Data.Vector as Vector
 import           Language.Haskell.TH (Q, Exp(..), Lit(..))
 import           Language.Haskell.TH.Syntax (Lift(..))
 import           Prelude hiding (any, null)
+import qualified Text.PrettyPrint.HughesPJClass as PP (Pretty(..))
 
 import           Aeson.Match.QQ.AesonUtils (toJSONE)
 
@@ -218,8 +219,18 @@ instance Aeson.ToJSON Type where
       StringT {} -> "string"
       StringCIT {} -> "ci-string"
       ArrayT {} -> "array"
-      ArrayUOT {} -> "array-unordered"
+      ArrayUOT {} -> "unordered-array"
       ObjectT {} -> "object"
+
+instance PP.Pretty Type where
+  pPrint = \case
+    BoolT {} -> "bool"
+    NumberT {} -> "number"
+    StringT {} -> "string"
+    StringCIT {} -> "ci-string"
+    ArrayT {} -> "array"
+    ArrayUOT {} -> "unordered-array"
+    ObjectT {} -> "object"
 
 embed :: Aeson.Value -> Matcher ext
 embed = \case

@@ -3,6 +3,7 @@ module Aeson.Match.QQ
   , qq
 
   , Error(..)
+  , TypeMismatch(..)
   , Mismatch(..)
   , MissingPathElem(..)
   , ExtraArrayValues(..)
@@ -30,6 +31,7 @@ import qualified Text.PrettyPrint.HughesPJClass as PP (Pretty(..))
 import           Aeson.Match.QQ.Internal.Match
   ( match
   , Error(..)
+  , TypeMismatch(..)
   , Mismatch(..)
   , MissingPathElem(..)
   , ExtraArrayValues(..)
