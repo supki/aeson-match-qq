@@ -48,7 +48,7 @@ spec = do
 
     pp [qq| 4 |] `shouldBe`
       "[qq|\n\
-      \  4.0\n\
+      \  4\n\
       \|]"
     pp [qq| 7.42 |] `shouldBe`
       "[qq|\n\
@@ -82,25 +82,25 @@ spec = do
       \|]"
     pp [qq| [1,2,3] |] `shouldBe`
       "[qq|\n\
-      \  [ 1.0\n\
-      \  , 2.0\n\
-      \  , 3.0\n\
+      \  [ 1\n\
+      \  , 2\n\
+      \  , 3\n\
       \  ]\n\
       \|]"
     pp [qq| [1, ...] |] `shouldBe`
       "[qq|\n\
-      \  [ 1.0\n\
+      \  [ 1\n\
       \  , ...\n\
       \  ]\n\
       \|]"
     pp [qq| [1, {qux: 42, quux: 0, ...}, 3] |] `shouldBe`
       "[qq|\n\
-      \  [ 1.0\n\
-      \  , { qux: 42.0\n\
-      \    , quux: 0.0\n\
+      \  [ 1\n\
+      \  , { quux: 0\n\
+      \    , qux: 42\n\
       \    , ...\n\
       \    }\n\
-      \  , 3.0\n\
+      \  , 3\n\
       \  ]\n\
       \|]"
 
@@ -112,9 +112,9 @@ spec = do
     pp [qq| (unordered) [1,2,3] |] `shouldBe`
       "[qq|\n\
       \  (unordered)\n\
-      \  [ 1.0\n\
-      \  , 2.0\n\
-      \  , 3.0\n\
+      \  [ 1\n\
+      \  , 2\n\
+      \  , 3\n\
       \  ]\n\
       \|]"
 
@@ -125,25 +125,25 @@ spec = do
       \|]"
     pp [qq| {foo: 4, bar: 7} |] `shouldBe`
       "[qq|\n\
-      \  { foo: 4.0\n\
-      \  , bar: 7.0\n\
+      \  { bar: 7\n\
+      \  , foo: 4\n\
       \  }\n\
       \|]"
     pp [qq| {foo: 4, ...} |] `shouldBe`
       "[qq|\n\
-      \  { foo: 4.0\n\
+      \  { foo: 4\n\
       \  , ...\n\
       \  }\n\
       \|]"
     pp [qq| {foo: 4, bar: {qux: 42, quux: 0, ...}, baz: 7} |] `shouldBe`
       "[qq|\n\
-      \  { foo: 4.0\n\
-      \  , bar:\n\
-      \    { qux: 42.0\n\
-      \    , quux: 0.0\n\
+      \  { bar:\n\
+      \    { quux: 0\n\
+      \    , qux: 42\n\
       \    , ...\n\
       \    }\n\
-      \  , baz: 7.0\n\
+      \  , baz: 7\n\
+      \  , foo: 4\n\
       \  }\n\
       \|]"
 

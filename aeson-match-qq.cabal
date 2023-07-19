@@ -27,7 +27,7 @@ source-repository head
 library
   exposed-modules:
       Aeson.Match.QQ
-      Aeson.Match.QQ.AesonUtils
+      Aeson.Match.QQ.Internal.AesonUtils
       Aeson.Match.QQ.Internal.Match
       Aeson.Match.QQ.Internal.Parse
       Aeson.Match.QQ.Internal.PrettyPrint

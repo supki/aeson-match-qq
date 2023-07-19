@@ -39,7 +39,7 @@ import           Language.Haskell.TH.Syntax (Lift(..))
 import           Prelude hiding (any, null)
 import qualified Text.PrettyPrint.HughesPJClass as PP (Pretty(..))
 
-import           Aeson.Match.QQ.AesonUtils (toJSONE)
+import           Aeson.Match.QQ.Internal.AesonUtils (toJSONE)
 
 
 -- | A value constructed using 'qq' that attempts to match
