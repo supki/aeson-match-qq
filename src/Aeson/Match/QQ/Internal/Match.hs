@@ -11,6 +11,7 @@
 module Aeson.Match.QQ.Internal.Match
   ( match
   , Error(..)
+  , TypeMismatch(..)
   , Mismatch(..)
   , MissingPathElem(..)
   , ExtraArrayValues(..)
@@ -38,7 +39,7 @@ import           Data.Foldable (for_, toList)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as List
-import           Data.List.NonEmpty (NonEmpty)
+import           Data.List.NonEmpty (NonEmpty, nonEmpty)
 import           Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
@@ -80,42 +81,45 @@ match matcher0 given0 =
   validationToEither (go [] matcher0 given0)
  where
   go path matcher given = do
-    let mismatched = mismatch path matcher given
-        mistyped = mistype path matcher given
+    let
+      mismatched =
+        mismatch path matcher given
+      mistyped expected =
+        mistype path expected matcher given
     case (matcher, given) of
       (Hole holeTypeO nameO, val) -> do
         for_ holeTypeO $ \holeType ->
-          unless (holeTypeMatch holeType val)
-            mistyped
+          unless (holeTypeMatch holeType val) $
+            mistyped (type_ holeType)
         pure (maybe mempty (\name -> HashMap.singleton name val) nameO)
       (Null, Aeson.Null) ->
         pure mempty
       (Null, _) -> do
-        mistyped
+        mismatched
         pure mempty
       (Bool b, Aeson.Bool b') -> do
         unless (b == b') mismatched
         pure mempty
       (Bool _, _) -> do
-        mistyped
+        mistyped BoolT
         pure mempty
       (Number n, Aeson.Number n') -> do
         unless (n == n') mismatched
         pure mempty
       (Number _, _) -> do
-        mistyped
+        mistyped NumberT
         pure mempty
       (String str, Aeson.String str') -> do
         unless (str == str') mismatched
         pure mempty
       (String _, _) -> do
-        mistyped
+        mistyped StringT
         pure mempty
       (StringCI str, Aeson.String str') -> do
         unless (str == CI.mk str') mismatched
         pure mempty
       (StringCI _, _) -> do
-        mistyped
+        mistyped StringCIT
         pure mempty
       (Array Box {values, extra}, Aeson.Array arr) ->
         let
@@ -131,12 +135,12 @@ match matcher0 given0 =
             (\i v -> maybe (missingPathElem path (Idx i)) (go (Idx i : path) v) (arr Vector.!? i))
             values
       (Array _, _) -> do
-        mistyped
+        mistyped ArrayT
         pure mempty
       (ArrayUO box, Aeson.Array arr) ->
         matchArrayUO mismatched path box arr
       (ArrayUO _, _) -> do
-        mistyped
+        mistyped ArrayUOT
         pure mempty
       ( Object Box {values, extra}
 #if MIN_VERSION_aeson(2,0,0)
@@ -158,7 +162,7 @@ match matcher0 given0 =
             (\k v -> maybe (missingPathElem path (Key k)) (go (Key k : path) v) (HashMap.lookup k o))
             values
       (Object _, _) -> do
-        mistyped
+        mistyped ObjectT
         pure mempty
       (Ext val, val') ->
         go path (embed val) val'
@@ -244,11 +248,12 @@ mismatch (Path . reverse -> path) matcher given =
 
 mistype
   :: [PathElem]
+  -> Type
   -> Matcher Aeson.Value
   -> Aeson.Value
   -> Validation (NonEmpty Error) a
-mistype (Path . reverse -> path) matcher given =
-  throwE (Mistype MkMismatch {..})
+mistype (Path . reverse -> path) expected matcher given =
+  throwE (Mistype MkTypeMismatch {..})
 
 missingPathElem
   :: [PathElem]
@@ -279,7 +284,7 @@ throwE =
 data Error
   = Mismatch Mismatch
     -- ^ The type of the value is correct, but the value itself is wrong
-  | Mistype Mismatch
+  | Mistype TypeMismatch
     -- ^ The type of the value is wrong
   | MissingPathElem MissingPathElem
     -- ^ The request path is missing in the value
@@ -298,7 +303,7 @@ instance PP.Pretty Error where
         ]
     Mistype err ->
       PP.vcat
-        [ "  error: type of value does not match"
+        [ "   error: type of value does not match"
         , PP.pPrint err
         ]
     MissingPathElem err ->
@@ -341,8 +346,73 @@ instance Aeson.ToJSON Error where
         , "value" .= v
         ]
 
--- | A generic error that covers cases where either the type of the value
--- is wrong, or the value itself does not match.
+-- | This error type covers the case where the type of the value does not match.
+data TypeMismatch = MkTypeMismatch
+  { path     :: Path
+  , expected :: Type
+  , matcher  :: Matcher Aeson.Value
+  , given    :: Aeson.Value
+  } deriving (Show, Eq)
+
+instance Aeson.ToJSON TypeMismatch where
+  toJSON MkTypeMismatch {..} =
+    Aeson.object
+      [ "path" .= path
+      , "expected" .= expected
+      , "actual" .= typeJOf given
+      , "matcher" .= matcher
+      , "given" .= given
+      ]
+
+instance PP.Pretty TypeMismatch where
+  pPrint MkTypeMismatch {..} =
+    PP.vcat
+      [ PP.hsep ["expected:", PP.pPrint expected]
+      , PP.hsep ["  actual:", PP.pPrint (typeJOf given)]
+      , PP.hsep ["    path:", PP.pPrint path]
+      , PP.hsep [" matcher:", pp matcher]
+      , PP.hsep ["   given:", ppJson given]
+      ]
+
+-- | JSON value type.
+data TypeJ
+  = NullTJ
+  | BoolTJ
+  | NumberTJ
+  | StringTJ
+  | ArrayTJ
+  | ObjectTJ
+    deriving (Show, Eq)
+
+instance Aeson.ToJSON TypeJ where
+  toJSON =
+    Aeson.toJSON . \case
+      NullTJ -> "null" :: Text
+      BoolTJ -> "bool"
+      NumberTJ -> "number"
+      StringTJ -> "string"
+      ArrayTJ -> "array"
+      ObjectTJ -> "object"
+
+instance PP.Pretty TypeJ where
+  pPrint = \case
+    NullTJ {} -> "null"
+    BoolTJ {} -> "bool"
+    NumberTJ {} -> "number"
+    StringTJ {} -> "string"
+    ArrayTJ {} -> "array"
+    ObjectTJ {} -> "object"
+
+typeJOf :: Aeson.Value -> TypeJ
+typeJOf = \case
+  Aeson.Null -> NullTJ
+  Aeson.Bool {} -> BoolTJ
+  Aeson.Number {} -> NumberTJ
+  Aeson.String {} -> StringTJ
+  Aeson.Array {} -> ArrayTJ
+  Aeson.Object {} -> ObjectTJ
+
+-- | This error type covers the case where the type matches but the value does not.
 data Mismatch = MkMismatch
   { path    :: Path
   , matcher :: Matcher Aeson.Value
@@ -365,7 +435,7 @@ instance PP.Pretty Mismatch where
       , PP.hsep ["  given:", ppJson given]
       ]
 
--- | This error covers the case where the requested path simply does not exist
+-- | This error type covers the case where the requested path simply does not exist
 -- in a 'Aeson.Value'.
 data MissingPathElem = MkMissingPathElem
   { path    :: Path
@@ -446,7 +516,7 @@ newtype Path = Path { unPath :: [PathElem] }
 
 instance PP.Pretty Path where
   pPrint =
-    foldMap PP.pPrint . unPath
+    maybe "." (foldMap PP.pPrint) . nonEmpty . unPath
 
 -- | A path element is either a key lookup in an object, or an index lookup in an array.
 data PathElem
