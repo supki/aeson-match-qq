@@ -228,12 +228,14 @@ spec = do
           \  actual: object\n\
           \    path: .\n\
           \ matcher: [qq|\n\
-          \            [ { foo: 4.0\n\
-          \              , bar: 7.0\n\
+          \            [ { bar: 7\n\
+          \              , foo: 4\n\
           \              }\n\
           \            ]\n\
           \          |]\n\
-          \   given: {\"bar\":7,\"foo\":4}"
+          \   given: { \"bar\": 7\n\
+          \          , \"foo\": 4\n\
+          \          }"
 
     -- https://github.com/supki/aeson-match-qq/issues/29
     it "#29" $ do

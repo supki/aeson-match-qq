@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 module Aeson.Match.QQ.Internal.PrettyPrint
   ( pp
   ) where
@@ -14,7 +15,9 @@ import qualified Data.Char as Char
 import           Data.Foldable (toList)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
-import           Data.Scientific (Scientific)
+import           Data.Int (Int64)
+import qualified Data.List as List
+import           Data.Scientific (Scientific, floatingOrInteger)
 import           Data.String (fromString)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -23,7 +26,7 @@ import           Data.Vector (Vector)
 import           Text.PrettyPrint ((<+>))
 import qualified Text.PrettyPrint as PP
 
-import Aeson.Match.QQ.Internal.Value
+import           Aeson.Match.QQ.Internal.Value
   ( Matcher(..)
   , HoleSig(..)
   , Type(..)
@@ -43,7 +46,7 @@ rValue :: Matcher Aeson.Value -> PP.Doc
 rValue = \case
   Hole sig name ->
     rHole sig name
-  Null {} ->
+  Null ->
     rNull
   Bool b ->
     rBool b
@@ -96,7 +99,7 @@ rBool =
 
 rNumber :: Scientific -> PP.Doc
 rNumber =
-  fromString . show
+  fromString . either (show @Double) (show @Int64) . floatingOrInteger
 
 rString :: Text -> PP.Doc
 rString =
@@ -133,7 +136,7 @@ rExt =
 
 rObject :: Box (HashMap Text (Matcher Aeson.Value)) -> PP.Doc
 rObject Box {values, extra} =
-  case HashMap.toList values of
+  case List.sortOn fst (HashMap.toList values) of
     [] ->
       "{}"
     kv : kvs ->

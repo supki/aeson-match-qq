@@ -28,7 +28,6 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as Aeson (toHashMapText)
 #endif
 import           Data.Bool (bool)
-import qualified Data.ByteString.Lazy.Char8 as ByteString.Lazy
 import qualified Data.CaseInsensitive as CI
 import           Data.Either.Validation
   ( Validation(..)
@@ -50,8 +49,7 @@ import qualified Data.Vector as Vector
 import           GHC.Exts (IsList)
 import           Prelude hiding (any, null)
 import qualified Text.PrettyPrint as PP
-  ( Doc
-  , vcat
+  ( vcat
   , hsep
   , brackets
   , text
@@ -60,7 +58,8 @@ import qualified Text.PrettyPrint as PP
   )
 import qualified Text.PrettyPrint.HughesPJClass as PP (Pretty(..))
 
-import           Aeson.Match.QQ.Internal.PrettyPrint (pp)
+import qualified Aeson.Match.QQ.Internal.AesonUtils as AesonUtils (pp)
+import qualified Aeson.Match.QQ.Internal.PrettyPrint as Matcher (pp)
 import           Aeson.Match.QQ.Internal.Value
   ( Matcher(..)
   , Box(..)
@@ -370,8 +369,8 @@ instance PP.Pretty TypeMismatch where
       [ PP.hsep ["expected:", PP.pPrint expected]
       , PP.hsep ["  actual:", PP.pPrint (typeJOf given)]
       , PP.hsep ["    path:", PP.pPrint path]
-      , PP.hsep [" matcher:", pp matcher]
-      , PP.hsep ["   given:", ppJson given]
+      , PP.hsep [" matcher:", Matcher.pp matcher]
+      , PP.hsep ["   given:", AesonUtils.pp given]
       ]
 
 -- | JSON value type.
@@ -431,8 +430,8 @@ instance PP.Pretty Mismatch where
   pPrint MkMismatch {..} =
     PP.vcat
       [ PP.hsep ["   path:", PP.pPrint path]
-      , PP.hsep ["matcher:", pp matcher]
-      , PP.hsep ["  given:", ppJson given]
+      , PP.hsep ["matcher:", Matcher.pp matcher]
+      , PP.hsep ["  given:", AesonUtils.pp given]
       ]
 
 -- | This error type covers the case where the requested path simply does not exist
@@ -476,7 +475,7 @@ instance PP.Pretty ExtraArrayValues where
       [ PP.hsep ["   path:", PP.pPrint path]
       , PP.hsep
           [ " values:"
-          , PP.vcat (map ppJson (toList values))
+          , PP.vcat (map AesonUtils.pp (toList values))
           ]
       ]
 
@@ -507,7 +506,7 @@ instance PP.Pretty ExtraObjectValues where
     prettyKV (k, v) =
       PP.vcat
         [ PP.hsep ["  key:", PP.pPrint (Key k)]
-        , PP.hsep ["value:", ppJson v]
+        , PP.hsep ["value:", AesonUtils.pp v]
         ]
 
 -- | A path is a list of path elements.
@@ -541,10 +540,6 @@ instance PP.Pretty PathElem where
       PP.char '.' <> PP.text (Text.unpack k)
     Idx i ->
       PP.brackets (PP.int i)
-
-ppJson :: Aeson.ToJSON a => a -> PP.Doc
-ppJson =
-  PP.text . ByteString.Lazy.unpack . Aeson.encode
 
 imapMaybe :: (Int -> a -> Maybe b) -> [a] -> [b]
 imapMaybe f =
