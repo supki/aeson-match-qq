@@ -1,4 +1,4 @@
-next
+1.7.0
 ====
 
   * Removed some of conditional compilation, by no longer pretending that
@@ -7,6 +7,8 @@ next
   * Fixed yet another embarrassing parser bug (https://github.com/supki/aeson-match-qq/pull/33)
 
   * Implemented `[...]` and `{...}` as shortcuts to `_ : array` and `_ : object` respectively (https://github.com/supki/aeson-match-qq/pull/34)
+
+  * Some work has been done on making match failures output understandable error messages (https://github.com/supki/aeson-match-qq/pull/37, https://github.com/supki/aeson-match-qq/pull/38, https://github.com/supki/aeson-match-qq/pull/39)
 
 1.6.1
 =====
