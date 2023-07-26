@@ -45,10 +45,8 @@ import           Aeson.Match.QQ.Internal.AesonUtils (toJSONE)
 -- | A value constructed using 'qq' that attempts to match
 -- a JSON document.
 data Matcher ext
-  = Hole (Maybe HoleSig) (Maybe Text)
-    -- ^ Optionally typed, optionally named _hole.
-    -- If a type is provided, the _hole only matches those values
-    -- that have that type.
+  = Hole HoleSig (Maybe Text)
+    -- ^ Typed and optionally named _hole.
     -- If a name is provided, the matched value is returned
     -- to the user.
   | Null
@@ -195,7 +193,9 @@ instance Aeson.ToJSON HoleSig where
 
 -- | _hole type
 data Type
-  = BoolT
+  = AnyT
+    -- ^ @_ : any@ or, equivalently, @_@
+  | BoolT
     -- ^ @_ : bool@
   | NumberT
     -- ^ @_ : number@
@@ -214,7 +214,8 @@ data Type
 instance Aeson.ToJSON Type where
   toJSON =
     Aeson.toJSON . \case
-      BoolT {} -> "bool" :: Text
+      AnyT {} -> "any" :: Text
+      BoolT {} -> "bool"
       NumberT {} -> "number"
       StringT {} -> "string"
       StringCIT {} -> "ci-string"
@@ -224,6 +225,7 @@ instance Aeson.ToJSON Type where
 
 instance PP.Pretty Type where
   pPrint = \case
+    AnyT {} -> "any"
     BoolT {} -> "bool"
     NumberT {} -> "number"
     StringT {} -> "string"

@@ -34,7 +34,7 @@ import           Data.Either.Validation
   , eitherToValidation
   , validationToEither
   )
-import           Data.Foldable (for_, toList)
+import           Data.Foldable (toList)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as List
@@ -86,10 +86,9 @@ match matcher0 given0 =
       mistyped expected =
         mistype path expected matcher given
     case (matcher, given) of
-      (Hole holeTypeO nameO, val) -> do
-        for_ holeTypeO $ \holeType ->
-          unless (holeTypeMatch holeType val) $
-            mistyped (type_ holeType)
+      (Hole holeType nameO, val) -> do
+        unless (holeTypeMatch holeType val) $
+          mistyped (type_ holeType)
         pure (maybe mempty (\name -> HashMap.singleton name val) nameO)
       (Null, Aeson.Null) ->
         pure mempty
@@ -169,14 +168,15 @@ match matcher0 given0 =
 holeTypeMatch :: HoleSig -> Aeson.Value -> Bool
 holeTypeMatch type_ val =
   case (type_, val) of
+    (HoleSig {type_ = AnyT}, _) -> True
     (HoleSig {nullable = True}, Aeson.Null) -> True
-    (HoleSig {type_ = BoolT} , Aeson.Bool {}) -> True
-    (HoleSig {type_ = NumberT} , Aeson.Number {}) -> True
-    (HoleSig {type_ = StringT} , Aeson.String {}) -> True
-    (HoleSig {type_ = StringCIT} , Aeson.String {}) -> True
-    (HoleSig {type_ = ArrayT} , Aeson.Array {}) -> True
-    (HoleSig {type_ = ArrayUOT} , Aeson.Array {}) -> True
-    (HoleSig {type_ = ObjectT} , Aeson.Object {}) -> True
+    (HoleSig {type_ = BoolT}, Aeson.Bool {}) -> True
+    (HoleSig {type_ = NumberT}, Aeson.Number {}) -> True
+    (HoleSig {type_ = StringT}, Aeson.String {}) -> True
+    (HoleSig {type_ = StringCIT}, Aeson.String {}) -> True
+    (HoleSig {type_ = ArrayT}, Aeson.Array {}) -> True
+    (HoleSig {type_ = ArrayUOT}, Aeson.Array {}) -> True
+    (HoleSig {type_ = ObjectT}, Aeson.Object {}) -> True
     (_, _) -> False
 
 matchArrayUO

@@ -1,3 +1,8 @@
+next
+====
+
+  * Added `any` type for consistency.
+
 1.7.0
 ====
 

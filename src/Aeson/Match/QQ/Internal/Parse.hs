@@ -80,15 +80,15 @@ optimize :: Matcher Exp -> Matcher Exp
 optimize = \case
   -- [...] -> _ : array
   Array Box {extra = True, values = (Vector.null -> True)} ->
-    Hole (Just (HoleSig ArrayT False)) Nothing
+    Hole (HoleSig ArrayT False) Nothing
   -- this optimization is probably never going to be used,
   -- but I'll include it for completeness:
   -- (unordered) [...] -> _ : unordered-array
   ArrayUO Box {extra = True, values = (Vector.null -> True)} ->
-    Hole (Just (HoleSig ArrayUOT False)) Nothing
+    Hole (HoleSig ArrayUOT False) Nothing
   -- {...} -> _ : object
   Object Box {extra = True, values = (HashMap.null -> True)} ->
-    Hole (Just (HoleSig ObjectT False)) Nothing
+    Hole (HoleSig ObjectT False) Nothing
   val ->
     val
 
@@ -100,9 +100,9 @@ any = do
   b <- optional Atto.peekWord8'
   expectedType <- case b of
     Just ColonP ->
-      fmap Just holeSig
+      holeSig
     _ ->
-      pure Nothing
+      pure (HoleSig AnyT False)
   pure (Hole expectedType name)
 
 null :: Atto.Parser (Matcher Exp)
@@ -249,7 +249,8 @@ holeSig = do
   _ <- Atto.word8 ColonP
   spaces
   asum
-    [ p "bool" BoolT
+    [ p "any" AnyT
+    , p "bool" BoolT
     , p "number" NumberT
     , p "string" StringT
     , p "ci-string" StringCIT

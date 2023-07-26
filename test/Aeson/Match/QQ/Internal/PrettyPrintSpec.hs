@@ -16,19 +16,23 @@ spec = do
   it "holes" $ do
     pp [qq| _ |] `shouldBe`
       "[qq|\n\
-      \  _\n\
+      \  _ : any\n\
       \|]"
     pp [qq| _hole |] `shouldBe`
       "[qq|\n\
-      \  _hole\n\
+      \  _hole : any\n\
       \|]"
     pp [qq| _"fancy hole" |] `shouldBe`
       "[qq|\n\
-      \  _\"fancy hole\"\n\
+      \  _\"fancy hole\" : any\n\
       \|]"
     pp [qq| _typed-hole : number |] `shouldBe`
       "[qq|\n\
       \  _typed-hole : number\n\
+      \|]"
+    pp [qq| _nullable-hole : string? |] `shouldBe`
+      "[qq|\n\
+      \  _nullable-hole : string?\n\
       \|]"
 
   it "basic values" $ do

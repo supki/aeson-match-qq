@@ -18,11 +18,14 @@ spec :: Spec
 spec = do
   describe "parse" $
     it "specs" $ do
-      [qq| _ |] `shouldBe` Hole Nothing Nothing
-      [qq| _hole |] `shouldBe` Hole Nothing (pure "hole")
-      [qq| _"fancy hole" |] `shouldBe` Hole Nothing (pure "fancy hole")
-      [qq| _typed-hole : number |] `shouldBe` Hole (pure (HoleSig NumberT False)) (pure "typed-hole")
-      [qq| _typed-nullable-hole : number? |] `shouldBe` Hole (pure (HoleSig NumberT True)) (pure "typed-nullable-hole")
+      let
+        anyT = HoleSig AnyT False
+      [qq| _ |] `shouldBe` Hole anyT Nothing
+      [qq| _hole |] `shouldBe` Hole anyT (pure "hole")
+      [qq| _"fancy hole" |] `shouldBe` Hole anyT (pure "fancy hole")
+      [qq| _typed-hole : number |] `shouldBe` Hole (HoleSig NumberT False) (pure "typed-hole")
+      [qq| _typed-nullable-hole : number? |] `shouldBe` Hole (HoleSig NumberT True) (pure "typed-nullable-hole")
+      [qq| _ : any |] `shouldBe` Hole anyT Nothing
 
       [qq| null |] `shouldBe` Null
 
@@ -39,18 +42,18 @@ spec = do
       [qq| [1, 2, 3] |] `shouldBe`
         Array Box {values = [Number 1, Number 2, Number 3], extra = False}
       [qq| [1, _, 3] |] `shouldBe`
-        Array Box {values = [Number 1, Hole Nothing Nothing, Number 3], extra = False}
+        Array Box {values = [Number 1, Hole anyT Nothing, Number 3], extra = False}
       [qq| [1, _, 3, ...] |] `shouldBe`
-        Array Box {values = [Number 1, Hole Nothing Nothing, Number 3], extra = True}
+        Array Box {values = [Number 1, Hole anyT Nothing, Number 3], extra = True}
 
       [qq| (unordered) [] |] `shouldBe`
         ArrayUO Box {values = [], extra = False}
       [qq| (unordered) [1, 2, 3] |] `shouldBe`
         ArrayUO Box {values = [Number 1, Number 2, Number 3], extra = False}
       [qq| (unordered) [1, _, 3] |] `shouldBe`
-        ArrayUO Box {values = [Number 1, Hole Nothing Nothing, Number 3], extra = False}
+        ArrayUO Box {values = [Number 1, Hole anyT Nothing, Number 3], extra = False}
       [qq| (unordered) [1, _, 3, ...] |] `shouldBe`
-        ArrayUO Box {values = [Number 1, Hole Nothing Nothing, Number 3], extra = True}
+        ArrayUO Box {values = [Number 1, Hole anyT Nothing, Number 3], extra = True}
 
       [qq| {} |] `shouldBe`
         Object Box {values = [], extra = False}
@@ -69,6 +72,7 @@ spec = do
   describe "match" $ do
     it "specs" $ do
       [qq| _ |] `shouldMatch` [aesonQQ| {foo: 4, bar: 7} |]
+      [qq| _ : any |] `shouldMatch` [aesonQQ| {foo: 4, bar: 7} |]
       [qq| null |] `shouldMatch` [aesonQQ| null |]
       [qq| true |] `shouldMatch` [aesonQQ| true |]
       [qq| false |] `shouldMatch` [aesonQQ| false |]

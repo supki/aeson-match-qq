@@ -65,9 +65,9 @@ rValue = \case
   Ext ext ->
     rExt ext
 
-rHole :: Maybe HoleSig -> Maybe Text -> PP.Doc
+rHole :: HoleSig -> Maybe Text -> PP.Doc
 rHole sig name =
-  ("_" <> maybe PP.empty rName name) <+> maybe PP.empty rSig sig
+  ("_" <> maybe PP.empty rName name) <+> rSig sig
 
 rName :: Text -> PP.Doc
 rName name =
@@ -81,6 +81,7 @@ rSig HoleSig {type_, nullable} =
   (":" <+> rType type_) <> bool PP.empty "?" nullable
  where
   rType = \case
+    AnyT -> "any"
     BoolT -> "bool"
     NumberT -> "number"
     StringT -> "string"
