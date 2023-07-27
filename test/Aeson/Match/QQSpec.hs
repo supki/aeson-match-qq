@@ -16,59 +16,6 @@ import           Aeson.Match.QQ
 
 spec :: Spec
 spec = do
-  describe "parse" $
-    it "specs" $ do
-      let
-        anyT = HoleSig AnyT False
-      [qq| _ |] `shouldBe` Hole anyT Nothing
-      [qq| _hole |] `shouldBe` Hole anyT (pure "hole")
-      [qq| _"fancy hole" |] `shouldBe` Hole anyT (pure "fancy hole")
-      [qq| _typed-hole : number |] `shouldBe` Hole (HoleSig NumberT False) (pure "typed-hole")
-      [qq| _typed-nullable-hole : number? |] `shouldBe` Hole (HoleSig NumberT True) (pure "typed-nullable-hole")
-      [qq| _ : any |] `shouldBe` Hole anyT Nothing
-
-      [qq| null |] `shouldBe` Null
-
-      [qq| false |] `shouldBe` Bool False
-      [qq| true |] `shouldBe` Bool True
-
-      [qq| 4 |] `shouldBe` Number 4
-      [qq| -7 |] `shouldBe` Number (-7)
-
-      [qq| "foo" |] `shouldBe` String "foo"
-
-      [qq| [] |] `shouldBe`
-        Array Box {values = [], extra = False}
-      [qq| [1, 2, 3] |] `shouldBe`
-        Array Box {values = [Number 1, Number 2, Number 3], extra = False}
-      [qq| [1, _, 3] |] `shouldBe`
-        Array Box {values = [Number 1, Hole anyT Nothing, Number 3], extra = False}
-      [qq| [1, _, 3, ...] |] `shouldBe`
-        Array Box {values = [Number 1, Hole anyT Nothing, Number 3], extra = True}
-
-      [qq| (unordered) [] |] `shouldBe`
-        ArrayUO Box {values = [], extra = False}
-      [qq| (unordered) [1, 2, 3] |] `shouldBe`
-        ArrayUO Box {values = [Number 1, Number 2, Number 3], extra = False}
-      [qq| (unordered) [1, _, 3] |] `shouldBe`
-        ArrayUO Box {values = [Number 1, Hole anyT Nothing, Number 3], extra = False}
-      [qq| (unordered) [1, _, 3, ...] |] `shouldBe`
-        ArrayUO Box {values = [Number 1, Hole anyT Nothing, Number 3], extra = True}
-
-      [qq| {} |] `shouldBe`
-        Object Box {values = [], extra = False}
-      [qq| {foo: 4} |] `shouldBe`
-        Object Box {values = [("foo", Number 4)], extra = False}
-      [qq| {foo: 4, "bar": 7} |] `shouldBe`
-        Object Box {values = [("foo", Number 4), ("bar", Number 7)], extra = False}
-      [qq| {foo: 4, "bar": 7, ...} |] `shouldBe`
-        Object Box {values = [("foo", Number 4), ("bar", Number 7)], extra = True}
-
-      [qq| {foo: #{4 + 7 :: Int}} |] `shouldBe`
-        Object Box {values = [("foo", Ext (Aeson.Number 11))], extra = False}
-      [qq| {foo: #{4 + 7 :: ToEncoding Int}} |] `shouldBe`
-        Object Box {values = [("foo", Ext (Aeson.Number 11))], extra = False}
-
   describe "match" $ do
     it "specs" $ do
       [qq| _ |] `shouldMatch` [aesonQQ| {foo: 4, bar: 7} |]
@@ -120,6 +67,8 @@ spec = do
         { foo: _ : string
         , bar: 7
         } |] `shouldNotMatch` [aesonQQ| {foo: null, bar: 7} |]
+      [qq| {foo: 4, foo: 7} |] `shouldNotMatch` [aesonQQ| {foo: 4} |]
+      [qq| {foo: 4, foo: 7} |] `shouldNotMatch` [aesonQQ| {foo: 7} |]
 
     it "paths" $ do
       match [qq| {foo: {bar: {baz: [1, 4]}}} |] [aesonQQ| {foo: {bar: {baz: [1, 7]}}} |] `shouldBe`
@@ -134,20 +83,27 @@ spec = do
         match [qq| {foo: _hole} |] [aesonQQ| {foo: {bar: {baz: [1, 4]}}} |] `shouldBe`
           pure (HashMap.singleton "hole" [aesonQQ| {bar: {baz: [1, 4]}} |])
 
-      -- https://github.com/supki/aeson-match-qq/issues/26
-      it "#26" $
-        match [qq|
-          { foo: _hole
-          }
-        |] [aesonQQ| {foo: {bar: {baz: [1, 4]}}} |] `shouldBe`
-          pure (HashMap.singleton "hole" [aesonQQ| {bar: {baz: [1, 4]}} |])
+      context "unordered array" $
+        it "matches" $ do
+          match [qq| (unordered) [1, _hole] |] [aesonQQ| [2, 1] |] `shouldBe`
+            pure (HashMap.singleton "hole" [aesonQQ| 2 |])
+          match [qq| (unordered) [{foo: _hole}, ...] |] [aesonQQ| [{foo: 2}, 1] |] `shouldBe`
+            pure (HashMap.singleton "hole" [aesonQQ| 2 |])
 
-    context "unordered array" $
-      it "named holes" $ do
-        match [qq| (unordered) [1, _hole] |] [aesonQQ| [2, 1] |] `shouldBe`
-          pure (HashMap.singleton "hole" [aesonQQ| 2 |])
-        match [qq| (unordered) [{foo: _hole}, ...] |] [aesonQQ| [{foo: 2}, 1] |] `shouldBe`
-          pure (HashMap.singleton "hole" [aesonQQ| 2 |])
+      context "duplicate keys" $ do
+        it "matches" $ do
+          match [qq| {foo: _name, foo: 4} |] [aesonQQ| {foo: 4} |] `shouldBe`
+            pure (HashMap.singleton "name" [aesonQQ| 4 |])
+          match [qq| {foo: [_a, 7], foo: [4, _b]} |] [aesonQQ| {foo: [4, 7]} |] `shouldBe`
+            pure [("a", [aesonQQ| 4 |]), ("b", [aesonQQ| 7 |])]
+
+        it "doesn't match" $ do
+          match [qq| {foo: _name, foo: 7} |] [aesonQQ| {foo: 4} |] `shouldBe`
+            throwE (Mismatch MkMismatch
+              { path = [Key "foo"]
+              , matcher = [qq| 7 |]
+              , given = Aeson.Number 4
+              })
 
   describe "repro" $ do
     -- https://github.com/supki/aeson-match-qq/issues/7
@@ -168,7 +124,7 @@ spec = do
       [qq| {foo: []} |] `shouldBe`
         Object
           (Box
-            { values = [("foo", Array (Box {values = [], extra = False}))]
+            { values = [("foo", [Array (Box {values = [], extra = False})])]
             , extra = False
             })
       [qq| [{}] |] `shouldBe`
@@ -220,6 +176,14 @@ spec = do
           , matcher = Null
           , given = Aeson.Number 4
           })
+
+    -- https://github.com/supki/aeson-match-qq/issues/26
+    it "#26" $
+      match [qq|
+        { foo: _hole
+        }
+      |] [aesonQQ| {foo: {bar: {baz: [1, 4]}}} |] `shouldBe`
+        pure (HashMap.singleton "hole" [aesonQQ| {bar: {baz: [1, 4]}} |])
 
     -- https://github.com/supki/aeson-match-qq/issues/28
     it "#28" $ do

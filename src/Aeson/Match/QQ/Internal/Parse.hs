@@ -30,7 +30,6 @@ import           Prelude hiding (any, null)
 import           Aeson.Match.QQ.Internal.Value
   ( Matcher(..)
   , Box(..)
-  , HoleSig(..)
   , Type(..)
   )
 
@@ -80,30 +79,30 @@ optimize :: Matcher Exp -> Matcher Exp
 optimize = \case
   -- [...] -> _ : array
   Array Box {extra = True, values = (Vector.null -> True)} ->
-    Hole (HoleSig ArrayT False) Nothing
+    Sig ArrayT False (Var "")
   -- this optimization is probably never going to be used,
   -- but I'll include it for completeness:
   -- (unordered) [...] -> _ : unordered-array
   ArrayUO Box {extra = True, values = (Vector.null -> True)} ->
-    Hole (HoleSig ArrayUOT False) Nothing
+    Sig ArrayUOT False (Var "")
   -- {...} -> _ : object
   Object Box {extra = True, values = (HashMap.null -> True)} ->
-    Hole (HoleSig ObjectT False) Nothing
+    Sig ObjectT False (Var "")
   val ->
     val
 
 any :: Atto.Parser (Matcher Exp)
 any = do
   _ <- Atto.word8 HoleP
-  name <- fmap Just key <|> pure Nothing
+  name <- key <|> pure ""
   spaces
   b <- optional Atto.peekWord8'
-  expectedType <- case b of
+  (type_, nullable) <- case b of
     Just ColonP ->
-      holeSig
+      sig
     _ ->
-      pure (HoleSig AnyT False)
-  pure (Hole expectedType name)
+      pure (AnyT, False)
+  pure (Sig type_ nullable (Var name))
 
 null :: Atto.Parser (Matcher Exp)
 null =
@@ -208,10 +207,10 @@ object = do
         sep <- Atto.satisfy (\w -> w == CommaP || w == CloseCurlyBracketP) Atto.<?> "',' or '}'"
         case sep of
           CommaP ->
-            loop ((k, val) : acc)
+            loop ((k, pure val) : acc)
           CloseCurlyBracketP ->
             pure $ Object Box
-              { values = HashMap.fromList ((k, val) : acc)
+              { values = HashMap.fromListWith (<>) ((k, pure val) : acc)
               , extra = False
               }
           _ ->
@@ -244,8 +243,8 @@ haskellExp =
     str <- Atto.takeWhile1 (/= CloseCurlyBracketP) <* Atto.word8 CloseCurlyBracketP
     either fail pure (parseExp (Text.unpack (Text.decodeUtf8 str)))
 
-holeSig :: Atto.Parser HoleSig
-holeSig = do
+sig :: Atto.Parser (Type, Bool)
+sig = do
   _ <- Atto.word8 ColonP
   spaces
   asum
@@ -262,7 +261,7 @@ holeSig = do
   p name typeName = do
     _ <- Atto.string name
     q <- optional (Atto.word8 QuestionMarkP)
-    pure (HoleSig typeName (isJust q))
+    pure (typeName, isJust q)
 
 eof :: Atto.Parser ()
 eof =

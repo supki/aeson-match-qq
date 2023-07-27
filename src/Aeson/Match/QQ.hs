@@ -14,7 +14,6 @@ module Aeson.Match.QQ
   , Array
   , Object
   , Box(..)
-  , HoleSig(..)
   , Type(..)
   , Path(..)
   , PathElem(..)
@@ -45,7 +44,6 @@ import           Aeson.Match.QQ.Internal.Value
   , Box(..)
   , Array
   , Object
-  , HoleSig(..)
   , Type(..)
   , quote
   )

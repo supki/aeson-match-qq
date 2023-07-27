@@ -158,3 +158,9 @@ spec = do
       \  { foo: 7\n\
       \  }\n\
       \|]"
+    pp [qq| {foo: 4, foo: 7} |] `shouldBe`
+      "[qq|\n\
+      \  { foo: 4\n\
+      \  , foo: 7\n\
+      \  }\n\
+      \|]"

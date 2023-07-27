@@ -63,7 +63,6 @@ import qualified Aeson.Match.QQ.Internal.PrettyPrint as Matcher (pp)
 import           Aeson.Match.QQ.Internal.Value
   ( Matcher(..)
   , Box(..)
-  , HoleSig(..)
   , Type(..)
   , embed
   )
@@ -86,10 +85,6 @@ match matcher0 given0 =
       mistyped expected =
         mistype path expected matcher given
     case (matcher, given) of
-      (Hole holeType nameO, val) -> do
-        unless (holeTypeMatch holeType val) $
-          mistyped (type_ holeType)
-        pure (maybe mempty (\name -> HashMap.singleton name val) nameO)
       (Null, Aeson.Null) ->
         pure mempty
       (Null, _) -> do
@@ -157,27 +152,38 @@ match matcher0 given0 =
             (extra || HashMap.null extraValues)
             (extraObjectValues path extraValues) *>
           fold
-            (\k v -> maybe (missingPathElem path (Key k)) (go (Key k : path) v) (HashMap.lookup k o))
+            (\k vs ->
+              maybe
+                (missingPathElem path (Key k))
+                (\ov -> foldr1 (liftA2 (<>)) (fmap (\v -> go (Key k : path) v ov) vs))
+                (HashMap.lookup k o))
             values
       (Object _, _) -> do
         mistyped ObjectT
         pure mempty
+      (Sig type_ nullable x, val) -> -- do -- ApplicativeDo shits the bed here for some reason
+        unless (sigTypeMatch type_ nullable val) (mistyped type_) *>
+        go path x val
+      (Var "", _) ->
+        pure mempty
+      (Var name, val) ->
+        pure (HashMap.singleton name val)
       (Ext val, val') ->
         go path (embed val) val'
 
-holeTypeMatch :: HoleSig -> Aeson.Value -> Bool
-holeTypeMatch type_ val =
-  case (type_, val) of
-    (HoleSig {type_ = AnyT}, _) -> True
-    (HoleSig {nullable = True}, Aeson.Null) -> True
-    (HoleSig {type_ = BoolT}, Aeson.Bool {}) -> True
-    (HoleSig {type_ = NumberT}, Aeson.Number {}) -> True
-    (HoleSig {type_ = StringT}, Aeson.String {}) -> True
-    (HoleSig {type_ = StringCIT}, Aeson.String {}) -> True
-    (HoleSig {type_ = ArrayT}, Aeson.Array {}) -> True
-    (HoleSig {type_ = ArrayUOT}, Aeson.Array {}) -> True
-    (HoleSig {type_ = ObjectT}, Aeson.Object {}) -> True
-    (_, _) -> False
+sigTypeMatch :: Type -> Bool -> Aeson.Value -> Bool
+sigTypeMatch type_ nullable val =
+  case (type_, nullable, val) of
+    (AnyT,      _,    _) -> True
+    (_,         True, Aeson.Null) -> True
+    (BoolT,     _,    Aeson.Bool {}) -> True
+    (NumberT,   _,    Aeson.Number {}) -> True
+    (StringT,   _,    Aeson.String {}) -> True
+    (StringCIT, _,    Aeson.String {}) -> True
+    (ArrayT,    _,    Aeson.Array {}) -> True
+    (ArrayUOT,  _,    Aeson.Array {}) -> True
+    (ObjectT,   _,    Aeson.Object {}) -> True
+    (_,         _,    _) -> False
 
 matchArrayUO
   :: Validation (NonEmpty Error) (HashMap Text Aeson.Value)

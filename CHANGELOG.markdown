@@ -3,6 +3,8 @@ next
 
   * Added `any` type for consistency.
 
+  * Duplicate keys in objects are handled ~~properly~~ better (https://github.com/supki/aeson-match-qq/pull/40)
+
 1.7.0
 ====
 
