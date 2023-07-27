@@ -14,7 +14,6 @@ module Aeson.Match.QQ.Internal.Value
   , Box(..)
   , Array
   , Object
-  , HoleSig(..)
   , Type(..)
   , embed
   , quote
@@ -29,6 +28,7 @@ import           Data.CaseInsensitive (CI)
 import qualified Data.CaseInsensitive as CI
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
+import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Scientific (Scientific)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -45,11 +45,7 @@ import           Aeson.Match.QQ.Internal.AesonUtils (toJSONE)
 -- | A value constructed using 'qq' that attempts to match
 -- a JSON document.
 data Matcher ext
-  = Hole HoleSig (Maybe Text)
-    -- ^ Typed and optionally named _hole.
-    -- If a name is provided, the matched value is returned
-    -- to the user.
-  | Null
+  = Null
   | Bool Bool
   | Number Scientific
   | String Text
@@ -59,18 +55,21 @@ data Matcher ext
   | ArrayUO (Array ext)
     -- ^ Unordered arrays
   | Object (Object ext)
+  | Var Text
+    -- ^ Unless the name of the variable is '_', then
+    -- the value is returned to the user in a 'HashMap'.
+  | Sig Type Bool (Matcher ext)
   | Ext ext
     -- ^ External values spliced into a 'Matcher' using the `#{}` syntax
     deriving (Show, Eq, Functor)
 
+type Array ext = Box (Vector (Matcher ext))
+
+type Object ext = Box (HashMap Text (NonEmpty (Matcher ext)))
+
 instance Aeson.ToJSON ext => Aeson.ToJSON (Matcher ext) where
   toJSON =
     Aeson.object . \case
-      Hole type_ name ->
-        [ "type" .= ("hole" :: Text)
-        , "expected-type" .= type_
-        , "name" .= name
-        ]
       Null ->
         [ "type" .= ("null" :: Text)
         ]
@@ -102,6 +101,16 @@ instance Aeson.ToJSON ext => Aeson.ToJSON (Matcher ext) where
         [ "type" .= ("object" :: Text)
         , "value" .= v
         ]
+      Var name ->
+        [ "type" .= ("var" :: Text)
+        , "name" .= name
+        ]
+      Sig type_ nullable v ->
+        [ "type" .= ("sig" :: Text)
+        , "expected-type" .= type_
+        , "nullable" .= nullable
+        , "value" .= v
+        ]
       Ext v ->
         [ "type" .= ("extension" :: Text)
         , "value" .= v
@@ -122,18 +131,12 @@ instance Aeson.ToJSON a => Aeson.ToJSON (Box a) where
       , "extra" .= extra
       ]
 
-type Array ext = Box (Vector (Matcher ext))
-
-type Object ext = Box (HashMap Text (Matcher ext))
-
 -- | It may be tempting to make this the 'Lift' instance for 'Matcher', but I don't
 -- think it would be correct. We can get a lot from re-using 'Lift' machinery: namely,
 -- we can cpmpletely bypass manual 'Exp' construction. But, fundamentally, 'Lift' is
 -- for "serializing" Haskell values and it is not what we are attempting here.
 quote :: Matcher Exp -> Q Exp
 quote = \case
-  Hole type_ name ->
-    [| Hole type_ name :: Matcher Aeson.Value |]
   Null ->
     [| Null :: Matcher Aeson.Value |]
   Bool b ->
@@ -165,31 +168,24 @@ quote = \case
   Object Box {values, extra} -> do
     let
       quoted =
-        fmap toExp (traverse (traverse quote) (HashMap.toList values))
+        fmap toExp (traverse (traverse (traverse quote)) (HashMap.toList values))
       toExp =
-        ListE . map (\(k, v) -> tup2 (LitE (StringL (Text.unpack k)), v))
+        ListE . map (\(k, v) -> tup2 (LitE (StringL (Text.unpack k)), nonEmptyE v))
       tup2 (a, b) =
         TupE [Just a, Just b]
+      nonEmptyE (e :| es) =
+        AppE (AppE (ConE '(:|)) e) (ListE es)
     [| Object Box
          { values = HashMap.fromList $quoted
          , extra
          } :: Matcher Aeson.Value |]
+  Sig type_ nullable val ->
+    [| Sig type_ nullable $(quote val) :: Matcher Aeson.Value |]
+  Var name ->
+    [| Var name :: Matcher Aeson.Value |]
   -- | This is fundamentally type-unsafe as long as we try to splice `Exp` in.
   Ext ext ->
     [| Ext (toJSONE $(pure ext)) :: Matcher Aeson.Value |]
-
--- | _hole type signature
-data HoleSig = HoleSig
-  { type_    :: Type
-  , nullable :: Bool
-  } deriving (Show, Eq, Lift)
-
-instance Aeson.ToJSON HoleSig where
-  toJSON HoleSig {..} =
-    Aeson.object
-      [ "type" .= type_
-      , "nullable" .= nullable
-      ]
 
 -- | _hole type
 data Type
@@ -251,4 +247,4 @@ embed = \case
 #else
   Aeson.Object o ->
 #endif
-    Object Box {values = fmap embed o, extra = False}
+    Object Box {values = fmap (pure . embed) o, extra = False}
