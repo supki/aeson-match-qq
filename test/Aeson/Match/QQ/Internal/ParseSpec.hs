@@ -5,10 +5,10 @@
 {-# LANGUAGE QuasiQuotes #-}
 module Aeson.Match.QQ.Internal.ParseSpec (spec) where
 
-import qualified Data.Aeson as Aeson
-import           Test.Hspec
+import Data.Aeson qualified as Aeson
+import Test.Hspec
 
-import           Aeson.Match.QQ
+import Aeson.Match.QQ
 
 
 spec :: Spec

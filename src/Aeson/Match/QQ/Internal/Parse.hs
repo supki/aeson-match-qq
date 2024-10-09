@@ -7,27 +7,27 @@ module Aeson.Match.QQ.Internal.Parse
   ( parse
   ) where
 
-import           Control.Applicative ((<|>), optional)
-import qualified Data.Aeson.Parser as Aeson
-import qualified Data.Attoparsec.ByteString as Atto
-import qualified Data.ByteString as ByteString
+import Control.Applicative ((<|>), optional)
+import Data.Aeson.Parser qualified as Aeson
+import Data.Attoparsec.ByteString qualified as Atto
+import Data.ByteString qualified as ByteString
 -- cannot use .Text here due to .Aeson parsers being tied to .ByteString
-import           Data.ByteString (ByteString)
-import qualified Data.CaseInsensitive as CI
-import qualified Data.Char as Char
-import           Data.Foldable (asum)
-import qualified Data.HashMap.Strict as HashMap
-import           Data.Maybe (isJust)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Data.Vector as Vector
-import           Data.Word (Word8)
-import           Language.Haskell.Meta.Parse (parseExp)
-import           Language.Haskell.TH (Exp(..))
-import           Prelude hiding (any, null)
+import Data.ByteString (ByteString)
+import Data.CaseInsensitive qualified as CI
+import Data.Char qualified as Char
+import Data.Foldable (asum)
+import Data.HashMap.Strict qualified as HashMap
+import Data.Maybe (isJust)
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Data.Vector qualified as Vector
+import Data.Word (Word8)
+import Language.Haskell.Meta.Parse (parseExp)
+import Language.Haskell.TH (Exp(..))
+import Prelude hiding (any, null)
 
-import           Aeson.Match.QQ.Internal.Value
+import Aeson.Match.QQ.Internal.Value
   ( Matcher(..)
   , Box(..)
   , Type(..)

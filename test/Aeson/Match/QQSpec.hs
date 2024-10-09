@@ -5,13 +5,13 @@
 {-# LANGUAGE QuasiQuotes #-}
 module Aeson.Match.QQSpec (spec) where
 
-import qualified Data.Aeson as Aeson
-import           Data.Aeson.QQ (aesonQQ)
-import           Data.List.NonEmpty (NonEmpty(..))
-import qualified Data.HashMap.Strict as HashMap
-import           Test.Hspec
+import Data.Aeson qualified as Aeson
+import Data.Aeson.QQ (aesonQQ)
+import Data.List.NonEmpty (NonEmpty(..))
+import Data.HashMap.Strict qualified as HashMap
+import Test.Hspec
 
-import           Aeson.Match.QQ
+import Aeson.Match.QQ
 
 
 spec :: Spec

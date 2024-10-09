@@ -3,17 +3,10 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages:
-- completed:
-    hackage: semialign-1.2.0.1@sha256:ee3468e349e72ec0a604ae05573a4de7181d97d10366254244a0cca8a76d6c35,2852
-    pantry-tree:
-      sha256: 5d5420cd362beee642537472026ba42cf7f9c75e423b9ecc4a1b3482e247375b
-      size: 537
-  original:
-    hackage: semialign-1.2.0.1
+packages: []
 snapshots:
 - completed:
-    sha256: 6d1532d40621957a25bad5195bfca7938e8a06d923c91bc52aa0f3c41181f2d4
-    size: 619204
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/33.yaml
-  original: lts-19.33
+    sha256: bc144ddf301a5c99f2cf51c7de50279ba144fd4486cb3c66f87ed761d6bbf6e9
+    size: 719131
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/27.yaml
+  original: lts-22.27
