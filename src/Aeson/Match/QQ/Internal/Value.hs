@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE LambdaCase #-}
@@ -8,7 +7,6 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ViewPatterns #-}
 module Aeson.Match.QQ.Internal.Value
   ( Matcher(..)
   , Box(..)
@@ -19,27 +17,25 @@ module Aeson.Match.QQ.Internal.Value
   , quote
   ) where
 
-import           Data.Aeson ((.=))
-import qualified Data.Aeson as Aeson
-#if MIN_VERSION_aeson(2,0,0)
-import qualified Data.Aeson.KeyMap as Aeson (toHashMapText)
-#endif
-import           Data.CaseInsensitive (CI)
-import qualified Data.CaseInsensitive as CI
-import           Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HashMap
-import           Data.List.NonEmpty (NonEmpty(..))
-import           Data.Scientific (Scientific)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import           Data.Vector (Vector)
-import qualified Data.Vector as Vector
-import           Language.Haskell.TH (Q, Exp(..), Lit(..))
-import           Language.Haskell.TH.Syntax (Lift(..))
-import           Prelude hiding (any, null)
-import qualified Text.PrettyPrint.HughesPJClass as PP (Pretty(..))
+import Data.Aeson ((.=))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.KeyMap qualified as Aeson (toHashMapText)
+import Data.CaseInsensitive (CI)
+import Data.CaseInsensitive qualified as CI
+import Data.HashMap.Strict (HashMap)
+import Data.HashMap.Strict qualified as HashMap
+import Data.List.NonEmpty (NonEmpty(..))
+import Data.Scientific (Scientific)
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Vector (Vector)
+import Data.Vector qualified as Vector
+import Language.Haskell.TH (Q, Exp(..), Lit(..))
+import Language.Haskell.TH.Syntax (Lift(..))
+import Prelude hiding (any, null)
+import Text.PrettyPrint.HughesPJClass qualified as PP (Pretty(..))
 
-import           Aeson.Match.QQ.Internal.AesonUtils (toJSONE)
+import Aeson.Match.QQ.Internal.AesonUtils (toJSONE)
 
 
 -- | A value constructed using 'qq' that attempts to match
@@ -242,9 +238,5 @@ embed = \case
     String n
   Aeson.Array xs ->
     Array Box {values = fmap embed xs, extra = False}
-#if MIN_VERSION_aeson(2,0,0)
-  Aeson.Object (Aeson.toHashMapText -> o) ->
-#else
   Aeson.Object o ->
-#endif
-    Object Box {values = fmap (pure . embed) o, extra = False}
+    Object Box {values = fmap (pure . embed) (Aeson.toHashMapText o), extra = False}

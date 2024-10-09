@@ -6,29 +6,29 @@ module Aeson.Match.QQ.Internal.PrettyPrint
   ( pp
   ) where
 
-import           Control.Monad ((<=<))
-import qualified Data.Aeson as Aeson
-import           Data.Bool (bool)
-import qualified Data.ByteString.Lazy as ByteString.Lazy
-import           Data.CaseInsensitive (CI)
-import qualified Data.CaseInsensitive as CI
-import qualified Data.Char as Char
-import           Data.Foldable (toList)
-import           Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HashMap
-import           Data.Int (Int64)
-import qualified Data.List as List
-import           Data.List.NonEmpty (NonEmpty)
-import           Data.Scientific (Scientific, floatingOrInteger)
-import           Data.String (fromString)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           Data.Text (Text)
-import           Data.Vector (Vector)
-import           Text.PrettyPrint ((<+>))
-import qualified Text.PrettyPrint as PP
+import Control.Monad ((<=<))
+import Data.Aeson qualified as Aeson
+import Data.Bool (bool)
+import Data.ByteString.Lazy qualified as ByteString.Lazy
+import Data.CaseInsensitive (CI)
+import Data.CaseInsensitive qualified as CI
+import Data.Char qualified as Char
+import Data.Foldable (toList)
+import Data.HashMap.Strict (HashMap)
+import Data.HashMap.Strict qualified as HashMap
+import Data.Int (Int64)
+import Data.List qualified as List
+import Data.List.NonEmpty (NonEmpty)
+import Data.Scientific (Scientific, floatingOrInteger)
+import Data.String (fromString)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Data.Text (Text)
+import Data.Vector (Vector)
+import Text.PrettyPrint ((<+>))
+import Text.PrettyPrint qualified as PP
 
-import           Aeson.Match.QQ.Internal.Value
+import Aeson.Match.QQ.Internal.Value
   ( Matcher(..)
   , Type(..)
   , Box(..)

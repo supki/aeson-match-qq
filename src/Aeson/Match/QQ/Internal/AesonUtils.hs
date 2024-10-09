@@ -6,21 +6,21 @@ module Aeson.Match.QQ.Internal.AesonUtils
   , pp
   ) where
 
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Encoding.Internal as Aeson (encodingToLazyByteString)
-import qualified Data.Aeson.KeyMap as Aeson.KeyMap
-import           Data.Bool (bool)
-import           Data.Foldable (toList)
-import qualified Data.List as List
-import           Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HashMap
-import           Data.Int (Int64)
-import           Data.Scientific (Scientific, floatingOrInteger)
-import           Data.String (fromString)
-import           Data.Text (Text)
-import           Data.Vector (Vector)
-import           Text.PrettyPrint ((<+>))
-import qualified Text.PrettyPrint as PP
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Encoding.Internal qualified as Aeson (encodingToLazyByteString)
+import Data.Aeson.KeyMap qualified as Aeson.KeyMap
+import Data.Bool (bool)
+import Data.Foldable (toList)
+import Data.List qualified as List
+import Data.HashMap.Strict (HashMap)
+import Data.HashMap.Strict qualified as HashMap
+import Data.Int (Int64)
+import Data.Scientific (Scientific, floatingOrInteger)
+import Data.String (fromString)
+import Data.Text (Text)
+import Data.Vector (Vector)
+import Text.PrettyPrint ((<+>))
+import Text.PrettyPrint qualified as PP
 
 
 -- | This is a round-about way to produce a 'Aeson.Value' from a 'ToJSON' instance.

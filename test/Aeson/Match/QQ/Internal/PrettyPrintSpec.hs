@@ -5,10 +5,10 @@
 {-# LANGUAGE QuasiQuotes #-}
 module Aeson.Match.QQ.Internal.PrettyPrintSpec (spec) where
 
-import           Test.Hspec
+import Test.Hspec
 
-import           Aeson.Match.QQ (qq)
-import           Aeson.Match.QQ.Internal.PrettyPrint (pp)
+import Aeson.Match.QQ (qq)
+import Aeson.Match.QQ.Internal.PrettyPrint (pp)
 
 
 spec :: Spec

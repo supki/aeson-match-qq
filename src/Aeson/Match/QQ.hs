@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 module Aeson.Match.QQ
   ( match
   , qq
@@ -21,13 +22,13 @@ module Aeson.Match.QQ
   , parse
   ) where
 
-import           Data.String (IsString(..))
-import qualified Data.Text.Encoding as Text
-import           Language.Haskell.TH.Quote (QuasiQuoter(..))
-import qualified Text.PrettyPrint as PP (render)
-import qualified Text.PrettyPrint.HughesPJClass as PP (Pretty(..))
+import Data.String (IsString(..))
+import Data.Text.Encoding qualified as Text
+import Language.Haskell.TH.Quote (QuasiQuoter(..))
+import Text.PrettyPrint qualified as PP (render)
+import Text.PrettyPrint.HughesPJClass qualified as PP (Pretty(..))
 
-import           Aeson.Match.QQ.Internal.Match
+import Aeson.Match.QQ.Internal.Match
   ( match
   , Error(..)
   , TypeMismatch(..)
@@ -38,8 +39,8 @@ import           Aeson.Match.QQ.Internal.Match
   , Path(..)
   , PathElem(..)
   )
-import           Aeson.Match.QQ.Internal.Parse (parse)
-import           Aeson.Match.QQ.Internal.Value
+import Aeson.Match.QQ.Internal.Parse (parse)
+import Aeson.Match.QQ.Internal.Value
   ( Matcher(..)
   , Box(..)
   , Array

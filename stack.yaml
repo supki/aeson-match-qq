@@ -1,6 +1,4 @@
-resolver: lts-19.33
+resolver: lts-22.27
 packages:
   - '.'
-extra-deps:
-  - 'semialign-1.2.0.1'
 allow-newer: true

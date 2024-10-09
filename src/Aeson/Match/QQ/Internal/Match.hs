@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -20,35 +19,32 @@ module Aeson.Match.QQ.Internal.Match
   , PathElem(..)
   ) where
 
-import           Control.Applicative (liftA2)
-import           Control.Monad (unless)
-import           Data.Aeson ((.=))
-import qualified Data.Aeson as Aeson
-#if MIN_VERSION_aeson(2,0,0)
-import qualified Data.Aeson.KeyMap as Aeson (toHashMapText)
-#endif
-import           Data.Bool (bool)
-import qualified Data.CaseInsensitive as CI
-import           Data.Either.Validation
+import Control.Monad (unless)
+import Data.Aeson ((.=))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.KeyMap qualified as Aeson (toHashMapText)
+import Data.Bool (bool)
+import Data.CaseInsensitive qualified as CI
+import Data.Either.Validation
   ( Validation(..)
   , eitherToValidation
   , validationToEither
   )
-import           Data.Foldable (toList)
-import           Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.List as List
-import           Data.List.NonEmpty (NonEmpty, nonEmpty)
-import           Data.Maybe (mapMaybe)
-import qualified Data.Set as Set
-import           Data.String (IsString(..))
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import           Data.Vector (Vector)
-import qualified Data.Vector as Vector
-import           GHC.Exts (IsList)
-import           Prelude hiding (any, null)
-import qualified Text.PrettyPrint as PP
+import Data.Foldable (toList)
+import Data.HashMap.Strict (HashMap)
+import Data.HashMap.Strict qualified as HashMap
+import Data.List qualified as List
+import Data.List.NonEmpty (NonEmpty, nonEmpty)
+import Data.Maybe (mapMaybe)
+import Data.Set qualified as Set
+import Data.String (IsString(..))
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Vector (Vector)
+import Data.Vector qualified as Vector
+import GHC.Exts (IsList)
+import Prelude hiding (any, null)
+import Text.PrettyPrint qualified as PP
   ( vcat
   , hsep
   , brackets
@@ -56,11 +52,11 @@ import qualified Text.PrettyPrint as PP
   , char
   , int
   )
-import qualified Text.PrettyPrint.HughesPJClass as PP (Pretty(..))
+import Text.PrettyPrint.HughesPJClass qualified as PP (Pretty(..))
 
-import qualified Aeson.Match.QQ.Internal.AesonUtils as AesonUtils (pp)
-import qualified Aeson.Match.QQ.Internal.PrettyPrint as Matcher (pp)
-import           Aeson.Match.QQ.Internal.Value
+import Aeson.Match.QQ.Internal.AesonUtils qualified as AesonUtils (pp)
+import Aeson.Match.QQ.Internal.PrettyPrint qualified as Matcher (pp)
+import Aeson.Match.QQ.Internal.Value
   ( Matcher(..)
   , Box(..)
   , Type(..)
@@ -136,11 +132,7 @@ match matcher0 given0 =
         mistyped ArrayUOT
         pure mempty
       ( Object Box {values, extra}
-#if MIN_VERSION_aeson(2,0,0)
         , Aeson.Object (Aeson.toHashMapText -> o)
-#else
-        , Aeson.Object o
-#endif
 
         ) ->
         let fold f =
