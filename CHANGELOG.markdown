@@ -1,5 +1,7 @@
-next
+1.8.0
 ====
+
+  * GHC 9.8 compatibility
 
   * Added `any` type for consistency.
 
