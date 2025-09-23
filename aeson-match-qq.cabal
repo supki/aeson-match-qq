@@ -1,11 +1,11 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.36.0.
+-- This file has been generated from package.yaml by hpack version 0.38.0.
 --
 -- see: https://github.com/sol/hpack
 
 name:           aeson-match-qq
-version:        1.7.0
+version:        1.8.0
 synopsis:       Declarative JSON matchers.
 description:    See README.markdown
 category:       Web
