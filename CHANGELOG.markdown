@@ -1,3 +1,8 @@
+1.9.0
+====
+
+  * Added comment syntax (https://github.com/supki/aeson-match-qq/pull/43)
+
 1.8.0
 ====
 
@@ -17,7 +22,7 @@
 
   * Implemented `[...]` and `{...}` as shortcuts to `_ : array` and `_ : object` respectively (https://github.com/supki/aeson-match-qq/pull/34)
 
-  * Some work has been done on making match failures output understandable error messages (https://github.com/supki/aeson-match-qq/pull/37, https://github.com/supki/aeson-match-qq/pull/38, https://github.com/supki/aeson-match-qq/pull/39)
+  * Some work has been done on making match failures understandable (https://github.com/supki/aeson-match-qq/pull/37, https://github.com/supki/aeson-match-qq/pull/38, https://github.com/supki/aeson-match-qq/pull/39)
 
 1.6.1
 =====
@@ -27,7 +32,7 @@
 1.6.0
 =====
 
-  * Clarified ans simplified API some more.
+  * Clarified and simplified API some more.
 
 1.5.3
 =====

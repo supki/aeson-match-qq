@@ -71,6 +71,42 @@ spec = do
     [qq| {foo: #{4 + 7 :: ToEncoding Int}} |] `shouldBe`
       Object Box {values = [("foo", [Ext (Aeson.Number 11)])], extra = False}
 
+  it "comments" $ do
+    [qq| _ # a nice hole |] `shouldBe` Sig AnyT False (Var "")
+    [qq|
+      [ 1
+      # , 2
+      , 3
+      ]
+    |] `shouldBe`
+      Array Box {values = [Number 1, Number 3], extra = False}
+    [qq|
+      [ 1 # one
+      , 2 # two
+      , 3 # three
+      ]
+    |] `shouldBe`
+      Array Box {values = [Number 1, Number 2, Number 3], extra = False}
+    [qq|
+      # it's an object!
+      { foo: 4
+      , bar: 7
+      }
+    |] `shouldBe`
+      Object Box {values = [("foo", [Number 4]), ("bar", [Number 7])], extra = False}
+    [qq|
+      # multiline
+      # comment
+      { foo: 4
+      # in the middle of
+      # object definition
+      , bar: 7
+      }
+      # and at the end
+      # too
+    |] `shouldBe`
+      Object Box {values = [("foo", [Number 4]), ("bar", [Number 7])], extra = False}
+
 newtype ToEncoding a = ToEncoding { unToEncoding :: a }
     deriving (Show, Eq, Num)
 

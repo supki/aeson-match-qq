@@ -267,12 +267,29 @@ eof :: Atto.Parser ()
 eof =
   Atto.endOfInput Atto.<?> "trailing garbage after a Matcher value"
 
--- This function has been stolen from aeson.
--- ref: https://hackage.haskell.org/package/aeson-1.4.6.0/docs/src/Data.Aeson.Parser.Internal.html#skipSpace
 spaces :: Atto.Parser ()
 spaces =
-  Atto.skipWhile (\b -> b == SpaceP || b == NewLineP || b == CRP || b == TabP)
-{-# INLINE spaces #-}
+  comment <|> whitespace <|> pure ()
+ where
+  comment = do
+    _ <- Atto.word8 HashP
+    b0 <- Atto.peekWord8
+    case b0 of
+      Just OpenCurlyBracketP ->
+        -- it's possible to rewrite this with Atto.lookAhead,
+        -- but I like this version better
+        fail "not a comment"
+      _ -> do
+        Atto.skipWhile (/= NewLineP)
+        spaces
+  whitespace = do
+    _ <- skipWhile1 (\b -> b == SpaceP || b == NewLineP || b == CRP || b == TabP)
+    spaces
+
+skipWhile1 :: (Word8 -> Bool) -> Atto.Parser ()
+skipWhile1 p = do
+  _ <- Atto.satisfy p
+  Atto.skipWhile p
 
 pattern HoleP, NP, FP, TP, DoubleQuoteP, DotP, CommaP, HashP :: Word8
 pattern HoleP = 95 -- '_'
