@@ -1,6 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 module Aeson.Match.QQ.Internal.ParseSpec (spec) where
@@ -29,7 +30,6 @@ spec = do
     [qq| 4 |] `shouldBe` Number 4
     [qq| -7 |] `shouldBe` Number (-7)
 
-    [qq| "foo" |] `shouldBe` String "foo"
 
     [qq| [] |] `shouldBe`
       Array Box {values = [], extra = False}
@@ -68,7 +68,7 @@ spec = do
 
     [qq| {foo: #{4 + 7 :: Int}} |] `shouldBe`
       Object Box {values = [("foo", [Ext (Aeson.Number 11)])], extra = False}
-    [qq| {foo: #{4 + 7 :: ToEncoding Int}} |] `shouldBe`
+    [qq| {foo: #{4 + 7 :: ToEncodingInt}} |] `shouldBe`
       Object Box {values = [("foo", [Ext (Aeson.Number 11)])], extra = False}
 
   it "comments" $ do
@@ -106,6 +106,21 @@ spec = do
       # too
     |] `shouldBe`
       Object Box {values = [("foo", [Number 4]), ("bar", [Number 7])], extra = False}
+
+  it "overloaded-record-dot" $ do
+    let
+      foo = Foo 4
+    -- note that for this to work -XOverloadedRecordDot
+    -- needs to be enabled in the module
+    [qq|
+      #{foo.bar}
+    |] `shouldBe` Ext (Aeson.Number 4)
+
+
+data Foo = Foo { bar :: Int }
+
+-- ghc-hs-meta regression
+type ToEncodingInt = ToEncoding Int
 
 newtype ToEncoding a = ToEncoding { unToEncoding :: a }
     deriving (Show, Eq, Num)

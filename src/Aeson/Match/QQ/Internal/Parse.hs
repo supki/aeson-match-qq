@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 module Aeson.Match.QQ.Internal.Parse
@@ -23,9 +24,11 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Vector qualified as Vector
 import Data.Word (Word8)
-import Language.Haskell.Meta.Parse (parseExp)
+import "ghc-hs-meta" Language.Haskell.Meta.Parse (parseExpWithExts)
 import Language.Haskell.TH (Exp(..))
-import Prelude hiding (any, null)
+import Language.Haskell.TH.Syntax qualified as Haskell (Extension)
+import Prelude hiding (any, exp, null)
+import Text.Printf (printf)
 
 import Aeson.Match.QQ.Internal.Value
   ( Matcher(..)
@@ -37,12 +40,12 @@ import Aeson.Match.QQ.Internal.Value
 -- | An 'attoparsec' parser for a 'Matcher'.
 --
 -- /Note:/ consumes spaces before and after the matcher.
-parse :: ByteString -> Either String (Matcher Exp)
-parse =
-  Atto.parseOnly (value <* eof)
+parse :: [Haskell.Extension] -> ByteString -> Either String (Matcher Exp)
+parse exts =
+  Atto.parseOnly (value exts <* eof)
 
-value :: Atto.Parser (Matcher Exp)
-value = do
+value :: [Haskell.Extension] -> Atto.Parser (Matcher Exp)
+value exts = do
   val <- between spaces spaces $ do
     b <- Atto.peekWord8'
     case b of
@@ -57,13 +60,13 @@ value = do
       DoubleQuoteP ->
         string
       OpenSquareBracketP ->
-        array
+        array exts
       OpenParenP ->
-        arrayUO <|> stringCI
+        arrayUO exts <|> stringCI
       OpenCurlyBracketP ->
-        object
+        object exts
       HashP ->
-        haskellExp
+        haskellExp exts
       _ | startOfNumber b ->
           number
         | otherwise ->
@@ -130,8 +133,8 @@ stringCI = do
   spaces
   fmap (StringCI . CI.mk) Aeson.jstring
 
-array :: Atto.Parser (Matcher Exp)
-array = do
+array :: [Haskell.Extension] -> Atto.Parser (Matcher Exp)
+array exts = do
   _ <- Atto.word8 OpenSquareBracketP
   spaces
   b <- Atto.peekWord8'
@@ -155,7 +158,7 @@ array = do
          , extra = True
          }
       _ -> do
-       val <- value
+       val <- value exts
        sep <- Atto.satisfy (\w -> w == CommaP || w == CloseSquareBracketP) Atto.<?> "',' or ']'"
        case sep of
          CommaP ->
@@ -168,15 +171,15 @@ array = do
          _ ->
            error "impossible"
 
-arrayUO :: Atto.Parser (Matcher Exp)
-arrayUO = do
+arrayUO :: [Haskell.Extension] -> Atto.Parser (Matcher Exp)
+arrayUO exts = do
   _ <- Atto.string "(unordered)"
   spaces
-  Array box <- array
+  Array box <- array exts
   pure (ArrayUO box)
 
-object :: Atto.Parser (Matcher Exp)
-object = do
+object :: [Haskell.Extension] -> Atto.Parser (Matcher Exp)
+object exts = do
   _ <- Atto.word8 OpenCurlyBracketP
   spaces
   b <- Atto.peekWord8'
@@ -203,7 +206,7 @@ object = do
         k <- key
         spaces
         _ <- Atto.word8 ColonP
-        val <- value
+        val <- value exts
         sep <- Atto.satisfy (\w -> w == CommaP || w == CloseCurlyBracketP) Atto.<?> "',' or '}'"
         case sep of
           CommaP ->
@@ -235,13 +238,17 @@ rest :: Atto.Parser ()
 rest =
   () <$ Atto.string "..."
 
-haskellExp :: Atto.Parser (Matcher Exp)
-haskellExp =
+haskellExp :: [Haskell.Extension] -> Atto.Parser (Matcher Exp)
+haskellExp exts =
   fmap Ext (Atto.string "#{" *> go)
  where
   go = do
     str <- Atto.takeWhile1 (/= CloseCurlyBracketP) <* Atto.word8 CloseCurlyBracketP
-    either fail pure (parseExp (Text.unpack (Text.decodeUtf8 str)))
+    case parseExpWithExts exts (Text.unpack (Text.decodeUtf8 str)) of
+      Left (line, col, err) ->
+        fail (printf "%d:%d: %s" line col err)
+      Right exp ->
+        pure exp
 
 sig :: Atto.Parser (Type, Bool)
 sig = do

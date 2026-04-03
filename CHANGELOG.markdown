@@ -1,3 +1,8 @@
+2.0.0
+=====
+
+  * Replaced dependency `haskell-src-meta` with `ghc-hs-meta` (https://github.com/supki/aeson-match-qq/pull/45)
+
 1.9.0
 ====
 

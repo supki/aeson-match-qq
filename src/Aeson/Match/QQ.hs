@@ -22,9 +22,11 @@ module Aeson.Match.QQ
   , parse
   ) where
 
+import Control.Monad (filterM)
 import Data.String (IsString(..))
 import Data.Text.Encoding qualified as Text
 import Language.Haskell.TH.Quote (QuasiQuoter(..))
+import Language.Haskell.TH.Syntax (isExtEnabled)
 import Text.PrettyPrint qualified as PP (render)
 import Text.PrettyPrint.HughesPJClass qualified as PP (Pretty(..))
 
@@ -53,8 +55,9 @@ import Aeson.Match.QQ.Internal.Value
 -- | Construct a 'Matcher'.
 qq :: QuasiQuoter
 qq = QuasiQuoter
-  { quoteExp = \str ->
-      case parse (Text.encodeUtf8 (fromString str)) of
+  { quoteExp = \str -> do
+      exts <- reifyEnabledExtensions
+      case parse exts (Text.encodeUtf8 (fromString str)) of
         Left err ->
           error ("Aeson.Match.QQ.qq: " ++ err)
         Right val ->
@@ -66,6 +69,9 @@ qq = QuasiQuoter
   , quoteDec =
       \_ -> error "Aeson.Match.QQ.qq: no quoteDec"
   }
+ where
+  reifyEnabledExtensions =
+    filterM isExtEnabled [minBound .. maxBound]
 
 -- | Pretty print an 'Error'.
 prettyError :: Error -> String

@@ -207,12 +207,12 @@ spec = do
 
     -- https://github.com/supki/aeson-match-qq/issues/29
     it "#29" $ do
-      parse "_ : not-a-known-type" `shouldBe`
+      parse [] "_ : not-a-known-type" `shouldBe`
         Left "unknown type in hole signature: Failed reading: empty"
 
     -- https://github.com/supki/aeson-match-qq/issues/32
     it "#32" $ do
-      parse "null some garbage" `shouldBe`
+      parse [] "null some garbage" `shouldBe`
         Left "trailing garbage after a Matcher value: endOfInput"
 
   describe "pretty-printing" $
