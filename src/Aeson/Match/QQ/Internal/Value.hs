@@ -6,7 +6,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
 module Aeson.Match.QQ.Internal.Value
   ( Matcher(..)
   , Box(..)
@@ -164,7 +163,7 @@ quote = \case
   Object Box {values, extra} -> do
     let
       quoted =
-        fmap toExp (traverse (traverse (traverse quote)) (HashMap.toList values))
+        fmap (toExp . HashMap.toList) ((traverse . traverse) quote values)
       toExp =
         ListE . map (\(k, v) -> tup2 (LitE (StringL (Text.unpack k)), nonEmptyE v))
       tup2 (a, b) =

@@ -307,8 +307,6 @@ pattern CloseSquareBracketP = 93 -- ']'
 
 pattern OpenParenP :: Word8
 pattern OpenParenP = 40 -- '('
--- pattern CloseParenP :: Word8
--- pattern CloseParenP = 41 -- ')'
 
 pattern OpenCurlyBracketP, CloseCurlyBracketP, ColonP :: Word8
 pattern OpenCurlyBracketP = 123 -- '{'
