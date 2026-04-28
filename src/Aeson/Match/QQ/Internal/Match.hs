@@ -55,18 +55,15 @@ import Text.PrettyPrint qualified as PP
 import Text.PrettyPrint.HughesPJClass qualified as PP (Pretty(..))
 
 import Aeson.Match.QQ.Internal.AesonUtils qualified as AesonUtils (pp)
+import Aeson.Match.QQ.Internal.Box (Box(..), Array)
 import Aeson.Match.QQ.Internal.PrettyPrint qualified as Matcher (pp)
-import Aeson.Match.QQ.Internal.Value
-  ( Matcher(..)
-  , Box(..)
-  , Type(..)
-  , embed
-  )
+import Aeson.Match.QQ.Internal.Value (Matcher(..), embed)
+import Aeson.Match.QQ.Internal.Type (Type(..))
 
 
 -- | Test if a 'Matcher' matches a 'Aeson.Value'.
 match
-  :: Matcher Aeson.Value
+  :: Matcher
   -> Aeson.Value
   -> Either (NonEmpty Error) (HashMap Text Aeson.Value)
      -- ^ Either a non-empty list of errors, or a mapping
@@ -180,7 +177,7 @@ sigTypeMatch type_ nullable val =
 matchArrayUO
   :: Validation (NonEmpty Error) (HashMap Text Aeson.Value)
   -> [PathElem]
-  -> Box (Vector (Matcher Aeson.Value))
+  -> Array Matcher
   -> Vector Aeson.Value
   -> Validation (NonEmpty Error) (HashMap Text Aeson.Value)
 matchArrayUO mismatched path Box {values, extra} xs = do
@@ -237,7 +234,7 @@ instance Ord I where
 
 mismatch
   :: [PathElem]
-  -> Matcher Aeson.Value
+  -> Matcher
   -> Aeson.Value
   -> Validation (NonEmpty Error) a
 mismatch (Path . reverse -> path) matcher given =
@@ -246,7 +243,7 @@ mismatch (Path . reverse -> path) matcher given =
 mistype
   :: [PathElem]
   -> Type
-  -> Matcher Aeson.Value
+  -> Matcher
   -> Aeson.Value
   -> Validation (NonEmpty Error) a
 mistype (Path . reverse -> path) expected matcher given =
@@ -319,47 +316,13 @@ instance PP.Pretty Error where
         , PP.pPrint err
         ]
 
-instance Aeson.ToJSON Error where
-  toJSON =
-    Aeson.object . \case
-      Mismatch v ->
-        [ "type" .= ("mismatch" :: Text)
-        , "value" .= v
-        ]
-      Mistype v ->
-        [ "type" .= ("mistype" :: Text)
-        , "value" .= v
-        ]
-      MissingPathElem v ->
-        [ "type" .= ("missing-path-elem" :: Text)
-        , "value" .= v
-        ]
-      ExtraArrayValues v ->
-        [ "type" .= ("extra-array-values" :: Text)
-        , "value" .= v
-        ]
-      ExtraObjectValues v ->
-        [ "type" .= ("extra-object-values" :: Text)
-        , "value" .= v
-        ]
-
 -- | This error type covers the case where the type of the value does not match.
 data TypeMismatch = MkTypeMismatch
   { path     :: Path
   , expected :: Type
-  , matcher  :: Matcher Aeson.Value
+  , matcher  :: Matcher
   , given    :: Aeson.Value
   } deriving (Show, Eq)
-
-instance Aeson.ToJSON TypeMismatch where
-  toJSON MkTypeMismatch {..} =
-    Aeson.object
-      [ "path" .= path
-      , "expected" .= expected
-      , "actual" .= typeJOf given
-      , "matcher" .= matcher
-      , "given" .= given
-      ]
 
 instance PP.Pretty TypeMismatch where
   pPrint MkTypeMismatch {..} =
@@ -412,17 +375,9 @@ typeJOf = \case
 -- | This error type covers the case where the type matches but the value does not.
 data Mismatch = MkMismatch
   { path    :: Path
-  , matcher :: Matcher Aeson.Value
+  , matcher :: Matcher
   , given   :: Aeson.Value
   } deriving (Show, Eq)
-
-instance Aeson.ToJSON Mismatch where
-  toJSON MkMismatch {..} =
-    Aeson.object
-      [ "path" .= path
-      , "matcher" .= matcher
-      , "given" .= given
-      ]
 
 instance PP.Pretty Mismatch where
   pPrint MkMismatch {..} =

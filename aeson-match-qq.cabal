@@ -30,9 +30,11 @@ library
   exposed-modules:
       Aeson.Match.QQ
       Aeson.Match.QQ.Internal.AesonUtils
+      Aeson.Match.QQ.Internal.Box
       Aeson.Match.QQ.Internal.Match
       Aeson.Match.QQ.Internal.Parse
       Aeson.Match.QQ.Internal.PrettyPrint
+      Aeson.Match.QQ.Internal.Type
       Aeson.Match.QQ.Internal.Value
   other-modules:
       Paths_aeson_match_qq
