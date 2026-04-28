@@ -18,24 +18,20 @@ import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.Int (Int64)
 import Data.List qualified as List
-import Data.List.NonEmpty (NonEmpty)
 import Data.Scientific (Scientific, floatingOrInteger)
 import Data.String (fromString)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Text (Text)
-import Data.Vector (Vector)
 import Text.PrettyPrint ((<+>))
 import Text.PrettyPrint qualified as PP
 
-import Aeson.Match.QQ.Internal.Value
-  ( Matcher(..)
-  , Type(..)
-  , Box(..)
-  )
+import Aeson.Match.QQ.Internal.Value (Matcher(..))
+import Aeson.Match.QQ.Internal.Box (Box(..), Array, Object)
+import Aeson.Match.QQ.Internal.Type (Type(..))
 
 
-pp :: Matcher Aeson.Value -> PP.Doc
+pp :: Matcher -> PP.Doc
 pp value =
   PP.vcat
     [ "[qq|"
@@ -43,7 +39,7 @@ pp value =
     , "|]"
     ]
 
-rValue :: Matcher Aeson.Value -> PP.Doc
+rValue :: Matcher -> PP.Doc
 rValue = \case
   Null ->
     rNull
@@ -91,7 +87,7 @@ rStringCI str =
     , rString (CI.original str)
     ]
 
-rArray :: Box (Vector (Matcher Aeson.Value)) -> PP.Doc
+rArray :: Array Matcher -> PP.Doc
 rArray Box {values, extra} =
   case toList values of
     [] ->
@@ -102,14 +98,14 @@ rArray Box {values, extra} =
         map (\x' -> "," <+> rValue x') xs <>
         [bool PP.empty ", ..." extra, "]"]
 
-rArrayUO :: Box (Vector (Matcher Aeson.Value)) -> PP.Doc
+rArrayUO :: Array Matcher -> PP.Doc
 rArrayUO box =
   PP.vcat
     [ "(unordered)"
     , rArray box
     ]
 
-rObject :: Box (HashMap Text (NonEmpty (Matcher Aeson.Value))) -> PP.Doc
+rObject :: Object Matcher -> PP.Doc
 rObject Box {values, extra} =
   case toKeyValues values of
     [] ->
@@ -133,7 +129,7 @@ toKeyValues :: (Ord k, Foldable t) => HashMap k (t v) -> [(k, v)]
 toKeyValues =
   traverse toList <=< List.sortOn fst . HashMap.toList
 
-rSig :: Type -> Bool -> Matcher Aeson.Value -> PP.Doc
+rSig :: Type -> Bool -> Matcher -> PP.Doc
 rSig type_ nullable val =
   rValue val <+> ((":" <+> rType type_) <> bool PP.empty "?" nullable)
  where
@@ -162,7 +158,7 @@ rExt :: Aeson.Value -> PP.Doc
 rExt =
   fromString . Text.unpack . Text.decodeUtf8 . ByteString.Lazy.toStrict . Aeson.encode
 
-simpleValue :: Matcher Aeson.Value -> Bool
+simpleValue :: Matcher -> Bool
 simpleValue = \case
   Null {} ->
     True

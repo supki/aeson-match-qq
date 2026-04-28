@@ -9,6 +9,8 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson.QQ (aesonQQ)
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.HashMap.Strict qualified as HashMap
+import Data.String (fromString)
+import Data.Text (Text)
 import Test.Hspec
 
 import Aeson.Match.QQ
@@ -17,6 +19,10 @@ import Aeson.Match.QQ
 spec :: Spec
 spec = do
   describe "match" $ do
+    let
+      text :: Int -> Text
+      text =
+        fromString . show
     it "specs" $ do
       [qq| _ |] `shouldMatch` [aesonQQ| {foo: 4, bar: 7} |]
       [qq| _ : any |] `shouldMatch` [aesonQQ| {foo: 4, bar: 7} |]
@@ -26,6 +32,12 @@ spec = do
       [qq| 4 |] `shouldMatch` [aesonQQ| 4 |]
       [qq| "foo" |] `shouldMatch` [aesonQQ| "foo" |]
       [qq| (ci) "foo" |] `shouldMatch` [aesonQQ| "Foo" |]
+      [qq| "" |] `shouldMatch` [aesonQQ| "" |]
+      [qq| "foo#{text 4}" |] `shouldMatch` [aesonQQ| "foo4" |]
+      [qq| "#{text 7}bar" |] `shouldMatch` [aesonQQ| "7bar" |]
+      [qq| "#{text 4}#{text 7}" |] `shouldMatch` [aesonQQ| "47" |]
+      [qq| (ci) "foo#{text 4}" |] `shouldMatch` [aesonQQ| "FOO4" |]
+      [qq| (ci) "foo#{\"bar\"}" |] `shouldMatch` [aesonQQ| "FoObAr" |]
       [qq| [1, 2, 3] |] `shouldMatch` [aesonQQ| [1, 2, 3] |]
       [qq| [1, _ : number, 3, ...] |] `shouldMatch` [aesonQQ| [1, 2, 3, 4] |]
       [qq| [1, _ : string] |] `shouldMatch` [aesonQQ| [1, "foo"] |]
@@ -277,11 +289,11 @@ instance Aeson.ToJSON a => Aeson.ToJSON (ToEncoding a) where
   toEncoding =
     Aeson.toEncoding . unToEncoding
 
-shouldMatch :: HasCallStack => Matcher Aeson.Value -> Aeson.Value -> Expectation
+shouldMatch :: HasCallStack => Matcher -> Aeson.Value -> Expectation
 shouldMatch a b =
   match a b `shouldBe` pure mempty
 
-shouldNotMatch :: HasCallStack => Matcher Aeson.Value -> Aeson.Value -> Expectation
+shouldNotMatch :: HasCallStack => Matcher -> Aeson.Value -> Expectation
 shouldNotMatch a b =
   match a b `shouldNotBe` pure mempty
 

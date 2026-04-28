@@ -30,6 +30,7 @@ import Language.Haskell.TH.Syntax (isExtEnabled)
 import Text.PrettyPrint qualified as PP (render)
 import Text.PrettyPrint.HughesPJClass qualified as PP (Pretty(..))
 
+import Aeson.Match.QQ.Internal.Box (Box(..), Array, Object)
 import Aeson.Match.QQ.Internal.Match
   ( match
   , Error(..)
@@ -42,14 +43,8 @@ import Aeson.Match.QQ.Internal.Match
   , PathElem(..)
   )
 import Aeson.Match.QQ.Internal.Parse (parse)
-import Aeson.Match.QQ.Internal.Value
-  ( Matcher(..)
-  , Box(..)
-  , Array
-  , Object
-  , Type(..)
-  , quote
-  )
+import Aeson.Match.QQ.Internal.Value (Matcher(..), quote)
+import Aeson.Match.QQ.Internal.Type (Type(..))
 
 
 -- | Construct a 'Matcher'.

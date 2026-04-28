@@ -5,7 +5,10 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 module Aeson.Match.QQ.Internal.Parse
-  ( parse
+  ( Parsed(..)
+  , CI(..)
+  , StringFrag(..)
+  , parse
   ) where
 
 import Control.Applicative ((<|>), optional)
@@ -14,11 +17,12 @@ import Data.Attoparsec.ByteString qualified as Atto
 import Data.ByteString qualified as ByteString
 -- cannot use .Text here due to .Aeson parsers being tied to .ByteString
 import Data.ByteString (ByteString)
-import Data.CaseInsensitive qualified as CI
 import Data.Char qualified as Char
 import Data.Foldable (asum)
+import Data.List.NonEmpty (NonEmpty(..), nonEmpty)
 import Data.HashMap.Strict qualified as HashMap
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, fromMaybe)
+import Data.Scientific (Scientific)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -30,21 +34,41 @@ import Language.Haskell.TH.Syntax qualified as Haskell (Extension)
 import Prelude hiding (any, exp, null)
 import Text.Printf (printf)
 
-import Aeson.Match.QQ.Internal.Value
-  ( Matcher(..)
-  , Box(..)
-  , Type(..)
-  )
+import Aeson.Match.QQ.Internal.Box (Box(..), Array, Object)
+import Aeson.Match.QQ.Internal.Type (Type(..))
 
+
+data Parsed
+  = Null
+  | Bool Bool
+  | Number Scientific
+  | String CI (NonEmpty StringFrag)
+  | Array (Array Parsed)
+  | ArrayUO (Array Parsed)
+  | Object (Object Parsed)
+  | Var Text
+  | Sig Type Bool Parsed
+  | Ext Exp
+    deriving (Show, Eq)
+
+data CI
+  = CS -- ^ case-sensitive
+  | CI -- ^ case-insensitive
+    deriving (Show, Eq)
+
+data StringFrag
+  = Raw Text
+  | Interpolate Exp
+    deriving (Show, Eq)
 
 -- | An 'attoparsec' parser for a 'Matcher'.
 --
 -- /Note:/ consumes spaces before and after the matcher.
-parse :: [Haskell.Extension] -> ByteString -> Either String (Matcher Exp)
+parse :: [Haskell.Extension] -> ByteString -> Either String Parsed
 parse exts =
   Atto.parseOnly (value exts <* eof)
 
-value :: [Haskell.Extension] -> Atto.Parser (Matcher Exp)
+value :: [Haskell.Extension] -> Atto.Parser Parsed
 value exts = do
   val <- between spaces spaces $ do
     b <- Atto.peekWord8'
@@ -58,11 +82,11 @@ value exts = do
       TP ->
         true
       DoubleQuoteP ->
-        string
+        string exts
       OpenSquareBracketP ->
         array exts
       OpenParenP ->
-        arrayUO exts <|> stringCI
+        arrayUO exts <|> stringCI exts
       OpenCurlyBracketP ->
         object exts
       HashP ->
@@ -78,7 +102,7 @@ value exts = do
   between a b p =
     a *> p <* b
 
-optimize :: Matcher Exp -> Matcher Exp
+optimize :: Parsed -> Parsed
 optimize = \case
   -- [...] -> _ : array
   Array Box {extra = True, values = (Vector.null -> True)} ->
@@ -94,7 +118,7 @@ optimize = \case
   val ->
     val
 
-any :: Atto.Parser (Matcher Exp)
+any :: Atto.Parser Parsed
 any = do
   _ <- Atto.word8 HoleP
   name <- key <|> pure ""
@@ -107,33 +131,74 @@ any = do
       pure (AnyT, False)
   pure (Sig type_ nullable (Var name))
 
-null :: Atto.Parser (Matcher Exp)
+null :: Atto.Parser Parsed
 null =
   Null <$ Atto.string "null"
 
-false :: Atto.Parser (Matcher Exp)
+false :: Atto.Parser Parsed
 false =
   Bool False <$ Atto.string "false"
 
-true :: Atto.Parser (Matcher Exp)
+true :: Atto.Parser Parsed
 true =
   Bool True <$ Atto.string "true"
 
-number :: Atto.Parser (Matcher Exp)
+number :: Atto.Parser Parsed
 number =
   fmap Number Aeson.scientific
 
-string :: Atto.Parser (Matcher Exp)
-string =
-  fmap String Aeson.jstring
+string :: [Haskell.Extension] -> Atto.Parser Parsed
+string exts = do
+  str <- Aeson.jstring
+  either fail (pure . String CS) (fragments exts str)
 
-stringCI :: Atto.Parser (Matcher Exp)
-stringCI = do
+stringCI :: [Haskell.Extension] -> Atto.Parser Parsed
+stringCI exts = do
   _ <- Atto.string "(ci)"
   spaces
-  fmap (StringCI . CI.mk) Aeson.jstring
+  str <- Aeson.jstring
+  either fail (pure . String CI) (fragments exts str)
 
-array :: [Haskell.Extension] -> Atto.Parser (Matcher Exp)
+fragments :: [Haskell.Extension] -> Text -> Either String (NonEmpty StringFrag)
+fragments exts str = do
+  frags <- Atto.parseOnly (interpolatedP exts <* eof) (Text.encodeUtf8 str)
+  pure (fromMaybe (pure (Raw "")) (nonEmpty frags))
+
+interpolatedP :: [Haskell.Extension] -> Atto.Parser [StringFrag]
+interpolatedP exts =
+  go []
+ where
+  go acc = do
+    b0 <- Atto.peekWord8
+    case b0 of
+      Just BackSlashP -> do
+        _ <- Atto.anyWord8
+        b1 <- Atto.peekWord8
+        case b1 of
+          Just HashP -> do
+            _ <- Atto.anyWord8
+            go (Raw "#" : acc)
+          _ ->
+            go (Raw "\\" : acc)
+      Just HashP -> do
+        _ <- Atto.anyWord8
+        b1 <- Atto.peekWord8
+        case b1 of
+          Just OpenCurlyBracketP -> do
+            _ <- Atto.anyWord8
+            str <- Atto.takeWhile (/= CloseCurlyBracketP)
+            _ <- Atto.word8 CloseCurlyBracketP
+            exp <- parseExp exts (Text.decodeUtf8 str)
+            go (Interpolate exp : acc)
+          _ ->
+            go (Raw "#" : acc)
+      Just _ -> do
+        frag <- fmap (Raw . Text.decodeUtf8) (Atto.takeWhile1 (\b -> b /= HashP && b /= BackSlashP))
+        go (frag : acc)
+      Nothing ->
+        pure (reverse acc)
+
+array :: [Haskell.Extension] -> Atto.Parser Parsed
 array exts = do
   _ <- Atto.word8 OpenSquareBracketP
   spaces
@@ -171,14 +236,14 @@ array exts = do
          _ ->
            error "impossible"
 
-arrayUO :: [Haskell.Extension] -> Atto.Parser (Matcher Exp)
+arrayUO :: [Haskell.Extension] -> Atto.Parser Parsed
 arrayUO exts = do
   _ <- Atto.string "(unordered)"
   spaces
   Array box <- array exts
   pure (ArrayUO box)
 
-object :: [Haskell.Extension] -> Atto.Parser (Matcher Exp)
+object :: [Haskell.Extension] -> Atto.Parser Parsed
 object exts = do
   _ <- Atto.word8 OpenCurlyBracketP
   spaces
@@ -238,17 +303,21 @@ rest :: Atto.Parser ()
 rest =
   () <$ Atto.string "..."
 
-haskellExp :: [Haskell.Extension] -> Atto.Parser (Matcher Exp)
+haskellExp :: [Haskell.Extension] -> Atto.Parser Parsed
 haskellExp exts =
-  fmap Ext (Atto.string "#{" *> go)
+  fmap Ext (Atto.string "#{" *> p)
  where
-  go = do
+  p = do
     str <- Atto.takeWhile1 (/= CloseCurlyBracketP) <* Atto.word8 CloseCurlyBracketP
-    case parseExpWithExts exts (Text.unpack (Text.decodeUtf8 str)) of
-      Left (line, col, err) ->
-        fail (printf "%d:%d: %s" line col err)
-      Right exp ->
-        pure exp
+    parseExp exts (Text.decodeUtf8 str)
+
+parseExp :: [Haskell.Extension] -> Text -> Atto.Parser Exp
+parseExp exts str =
+  case parseExpWithExts exts (Text.unpack str) of
+    Left (line, col, err) ->
+      fail (printf "%d:%d: %s" line col err)
+    Right exp ->
+      pure exp
 
 sig :: Atto.Parser (Type, Bool)
 sig = do
@@ -331,6 +400,9 @@ pattern SpaceP = 0x20
 pattern NewLineP = 0x0a
 pattern CRP = 0x0d
 pattern TabP = 0x09
+
+pattern BackSlashP :: Word8
+pattern BackSlashP = 92 -- '\'
 
 pattern QuestionMarkP :: Word8
 pattern QuestionMarkP = 63 -- '?'

@@ -2,6 +2,7 @@
 =====
 
   * Replaced dependency `haskell-src-meta` with `ghc-hs-meta` (https://github.com/supki/aeson-match-qq/pull/45)
+  * Added string interpolation syntax (https://github.com/supki/aeson-match-qq/pull/48)
 
 1.9.0
 ====

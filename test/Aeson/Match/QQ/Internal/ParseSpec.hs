@@ -30,6 +30,10 @@ spec = do
     [qq| 4 |] `shouldBe` Number 4
     [qq| -7 |] `shouldBe` Number (-7)
 
+    [qq| "" |] `shouldBe` String ""
+    [qq| (ci) "" |] `shouldBe` StringCI ""
+    [qq| "#{\"foo\" <> \"bar\"}" |] `shouldBe` String "foobar"
+    [qq| (ci) "#{\"foo\" <> \"bar\"}" |] `shouldBe` StringCI "foobar"
 
     [qq| [] |] `shouldBe`
       Array Box {values = [], extra = False}
