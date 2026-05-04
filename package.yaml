@@ -52,6 +52,7 @@ tests:
       - aeson-qq
       - aeson-match-qq
       - hspec
+      - text
       - unordered-containers
     source-dirs:
       test
