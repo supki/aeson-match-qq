@@ -1,0 +1,40 @@
+name: build
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        resolver:
+          - lts-23.28 # 9.8.4
+          - lts-24.39 # 9.10.3
+          - nightly
+    continue-on-error: ${{ contains(matrix.resolver, 'nightly') }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: haskell-actions/setup@cd0d9bdd65b20557f41bea4dbe43d0b5fbbfe553 # @v2
+        with:
+          enable-stack: true
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.stack
+            ~/.stack-work
+          key: ${{ runner.os }}-stack-${{ matrix.resolver }}-${{ hashFiles('stack.yaml.lock', '**/*.cabal') }}
+
+      - run: stack build --resolver ${{ matrix.resolver }} --test --no-terminal
